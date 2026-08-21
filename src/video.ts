@@ -7,6 +7,7 @@ import {
   Quality,
 } from 'mediabunny';
 import { frameAtElapsedSeconds } from './animation';
+import { chapterLabelFor } from './chapters';
 import { placeLabelAtProgress } from './places';
 import { drawFrame } from './renderer';
 import type { DrawStyle, PreparedJourney } from './types';
@@ -18,6 +19,7 @@ export interface ExportOptions {
   style: DrawStyle;
   outroHoldSeconds: number;
   showPlaceLabels: boolean;
+  chapterMode: string;
   locale: 'zh' | 'en';
   audioBuffer?: AudioBuffer | null;
   onProgress?: (fraction: number) => void;
@@ -130,9 +132,17 @@ export async function createJourneyMp4(
         options.locale,
       )
       : null;
+    const chapterLabel = chapterLabelFor(
+      options.chapterMode,
+      journey.points,
+      journey.cumulativeDistanceKm,
+      animationFrame.journeyProgress,
+      options.locale,
+    );
     drawFrame(canvas, journey, animationFrame, options.title, options.periodLabel, {
       ...options.style,
       placeLabel,
+      chapterLabel,
     });
     await source.add(frame * frameDuration, frameDuration, { keyFrame: frame % fps === 0 });
     options.onProgress?.((frame + 1) / frameCount);

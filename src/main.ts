@@ -1,4 +1,21 @@
 import './style.css';
+import {
+  applyPrivacyIfNeeded,
+  chapterLabelFor,
+  comparePointsForYear,
+  compareWorldPoints,
+  formatEta,
+  parseJsonInWorker,
+  privacyEnabled,
+  readMapStyle,
+  readMarkerStyle,
+  readPreviewSpeed,
+  chapterMode,
+  compareEnabled,
+  compareYear,
+  showClassifiedError,
+  wireAdvancedControls,
+} from './advanced';
 import { frameAtElapsedSeconds, totalDurationSeconds } from './animation';
 import { formatById, VIDEO_FORMATS } from './formats';
 import { cumulativeDistances } from './geo';
@@ -82,6 +99,12 @@ const shareButton = element<HTMLButtonElement>('share-button');
 const downloadLink = element<HTMLAnchorElement>('download-link');
 const copyLinkButton = element<HTMLButtonElement>('copy-link-button');
 const downloadPosterButton = element<HTMLButtonElement>('download-poster-button');
+const errorHint = element<HTMLParagraphElement>('error-hint');
+const etaLabel = element<HTMLSpanElement>('eta-label');
+const shareCard = element<HTMLElement>('share-card');
+const shareCardTitle = element<HTMLHeadingElement>('share-card-title');
+const shareCardMeta = element<HTMLParagraphElement>('share-card-meta');
+const shareCardCanvas = element<HTMLCanvasElement>('share-card-canvas');
 const rawOnlyDialog = element<HTMLDialogElement>('raw-only-dialog');
 const openGoogleMapsButton = element<HTMLButtonElement>('open-google-maps');
 const continueRawDataButton = element<HTMLButtonElement>('continue-raw-data');
@@ -200,12 +223,16 @@ function filteredSemanticPoints(): GeoPoint[] {
 }
 
 function currentPoints(): GeoPoint[] {
+  let points: GeoPoint[];
   if (rawSignalsToggle.checked) {
-    return rebuildRawSignalProcessing() ? rawSignalProcessing?.points ?? [] : [];
+    points = rebuildRawSignalProcessing() ? rawSignalProcessing?.points ?? [] : [];
+  } else {
+    const source = filteredSemanticPoints();
+    points = exactDateToggle.checked
+      ? selectDateRange(source, startDateInput.value, endDateInput.value)
+      : selectRange(source, startSelect.value, endSelect.value);
   }
-  const source = filteredSemanticPoints();
-  if (exactDateToggle.checked) return selectDateRange(source, startDateInput.value, endDateInput.value);
-  return selectRange(source, startSelect.value, endSelect.value);
+  return applyPrivacyIfNeeded(points, privacyEnabled());
 }
 
 function formatInputDate(value: string): string {
@@ -241,6 +268,11 @@ function currentRangeSignature(): string {
     `labels:${placeLabelsToggle.checked}`,
     `outro:${outroHoldInput.value}`,
     `merge:${mergeLabels.join('|')}`,
+    `map:${readMapStyle()}`,
+    `marker:${readMarkerStyle()}`,
+    `chapter:${chapterMode()}`,
+    `privacy:${privacyEnabled()}`,
+    `compare:${compareEnabled()}:${compareYear()}`,
   ].join(';');
 }
 
@@ -349,6 +381,7 @@ async function getPreparedJourney(signal?: AbortSignal): Promise<PreparedJourney
     cameraMovementSelect.value as CameraMovement,
     Number(durationSelect.value),
     compressionSelect.value as CompressionMode,
+    readMapStyle(),
     signal,
     (completed, total) => {
       progressLabel.textContent = locale === 'en'
@@ -370,12 +403,10 @@ function requireMapConsent(): boolean {
   return false;
 }
 
-function parseTimelineText(text: string): unknown {
-  try {
-    return JSON.parse(text) as unknown;
-  } catch {
+function parseTimelineText(text: string): Promise<unknown> {
+  return parseJsonInWorker(text).catch(() => {
     throw new TimelineParseError('malformed-json', '這不是有效或完整的 JSON 檔。');
-  }
+  });
 }
 
 function applyPoints(points: GeoPoint[], sourceName: string, append: boolean): void {
@@ -485,7 +516,7 @@ async function loadFile(file: File, append = false): Promise<void> {
     applyPoints(parseKml(text), file.name, append);
     return;
   }
-  const data = parseTimelineText(text);
+  const data = await parseTimelineText(text);
   try {
     applyTimeline(data, file.name, false, append);
   } catch (error) {
@@ -516,6 +547,14 @@ async function decodeBgm(file: File): Promise<AudioBuffer> {
 
 function currentStyle() {
   const theme = themeById(themeSelect.value);
+  let compareWorld: ReturnType<typeof compareWorldPoints> | undefined;
+  if (compareEnabled()) {
+    const year = compareYear();
+    if (year > 2000) {
+      const compare = comparePointsForYear(allPoints, year);
+      if (compare.length > 1) compareWorld = compareWorldPoints(compare);
+    }
+  }
   return {
     route: theme.route,
     routeFade: theme.routeFade,
@@ -524,6 +563,8 @@ function currentStyle() {
     titleBg: theme.titleBg,
     title: theme.title,
     subtitle: theme.subtitle,
+    markerStyle: readMarkerStyle(),
+    compareWorldPoints: compareWorld,
   };
 }
 
@@ -578,7 +619,7 @@ sampleButton.addEventListener('click', async () => {
   try {
     const response = await fetch(`${import.meta.env.BASE_URL}sample-timeline.json`);
     if (!response.ok) throw new Error(locale === 'en' ? 'Sample missing.' : '無法載入虛構範例。');
-    applyTimeline(parseTimelineText(await response.text()), locale === 'en' ? 'Fictional sample' : '虛構範例');
+    applyTimeline(await parseTimelineText(await response.text()), locale === 'en' ? 'Fictional sample' : '虛構範例');
   } catch (error) {
     setError(localizeError(error, locale === 'en' ? 'Sample missing.' : '無法載入虛構範例。'));
     previewCard.classList.remove('hidden');
@@ -670,19 +711,28 @@ previewButton.addEventListener('click', async () => {
     const previewJourneyDuration = Math.min(8, Number(durationSelect.value));
     const outroHold = Number(outroHoldInput.value) || 2.5;
     const previewDuration = totalDurationSeconds(previewJourneyDuration, outroHold);
+    const speed = Math.max(1, readPreviewSpeed());
     const tick = (now: number): void => {
-      const elapsedSeconds = Math.min(previewDuration, (now - started) / 1000);
+      const elapsedSeconds = Math.min(previewDuration, ((now - started) / 1000) * speed);
       const fraction = elapsedSeconds / previewDuration;
       const frame = frameAtElapsedSeconds(elapsedSeconds, previewJourneyDuration, outroHold);
       const placeLabel = placeLabelsToggle.checked
         ? placeLabelAtProgress(journey.points, journey.cumulativeDistanceKm, frame.journeyProgress, locale)
         : null;
+      const chapterLabel = chapterLabelFor(
+        chapterMode(),
+        journey.points,
+        journey.cumulativeDistanceKm,
+        frame.journeyProgress,
+        locale,
+      );
       drawFrame(canvas, journey, frame, titleInput.value.trim(), currentPeriodLabel(), {
         ...currentStyle(),
         placeLabel,
+        chapterLabel,
       });
       progressLabel.textContent = fraction < 1
-        ? (locale === 'en' ? 'Previewing' : '預覽中')
+        ? (locale === 'en' ? `Previewing ${speed}x` : `預覽中 ${speed}x`)
         : (locale === 'en' ? 'Preview complete' : '預覽完成');
       if (fraction < 1) previewAnimation = requestAnimationFrame(tick);
     };
@@ -701,22 +751,30 @@ cancelButton.addEventListener('click', () => {
   exportController?.abort();
 });
 
-createButton.addEventListener('click', async () => {
+createButton.addEventListener('click', () => {
+  void runExportOnce();
+});
+
+async function runExportOnce(): Promise<void> {
   if (!requireMapConsent()) return;
   cancelAnimationFrame(previewAnimation);
   setError(null);
+  errorHint.textContent = '';
   resultActions.classList.add('hidden');
   resultVideo.classList.add('hidden');
+  shareCard.classList.add('hidden');
   previewCard.classList.remove('hidden');
   progress.classList.remove('hidden');
   cancelButton.classList.remove('hidden');
   cancelButton.disabled = false;
   progress.value = 0;
+  etaLabel.textContent = '';
   isExporting = true;
   window.addEventListener('beforeunload', beforeUnloadGuard);
   refreshActionAvailability();
   exportController = new AbortController();
   const wakeLock = await requestWakeLock();
+  const startedAt = performance.now();
   try {
     const journey = await getPreparedJourney(exportController.signal);
     progressLabel.textContent = locale === 'en' ? 'Creating MP4' : '正在產出 MP4';
@@ -727,6 +785,7 @@ createButton.addEventListener('click', async () => {
       style: currentStyle(),
       outroHoldSeconds: Number(outroHoldInput.value) || 2.5,
       showPlaceLabels: placeLabelsToggle.checked,
+      chapterMode: chapterMode(),
       locale,
       audioBuffer,
       signal: exportController.signal,
@@ -735,6 +794,11 @@ createButton.addEventListener('click', async () => {
         progressLabel.textContent = locale === 'en'
           ? `Creating MP4 ${Math.round(fraction * 100)}%`
           : `正在產出 MP4 ${Math.round(fraction * 100)}%`;
+        if (fraction > 0.05) {
+          const elapsed = (performance.now() - startedAt) / 1000;
+          const remaining = elapsed / fraction - elapsed;
+          etaLabel.textContent = formatEta(remaining, locale);
+        }
       },
     });
     if (resultUrl) URL.revokeObjectURL(resultUrl);
@@ -747,6 +811,27 @@ createButton.addEventListener('click', async () => {
     progressLabel.textContent = locale === 'en'
       ? `Video ready · ${(blob.size / 1_000_000).toFixed(1)} MB`
       : `影片已就緒 · ${(blob.size / 1_000_000).toFixed(1)} MB`;
+    etaLabel.textContent = '';
+    const distance = Math.round(selectedDistanceKm(journey.points));
+    shareCard.classList.remove('hidden');
+    shareCardTitle.textContent = titleInput.value.trim() || (locale === 'en' ? 'My Journey' : '我的旅程');
+    shareCardMeta.textContent = `${currentPeriodLabel()} · ${distance} km`;
+    shareCardCanvas.width = 480;
+    shareCardCanvas.height = 480;
+    const ctx = shareCardCanvas.getContext('2d');
+    if (ctx) {
+      ctx.fillStyle = '#1c2a24';
+      ctx.fillRect(0, 0, 480, 480);
+      ctx.drawImage(canvas, 0, 0, 480, 480);
+      ctx.fillStyle = 'rgba(255,252,247,0.92)';
+      ctx.fillRect(24, 360, 432, 96);
+      ctx.fillStyle = '#1c2a24';
+      ctx.font = '700 28px sans-serif';
+      ctx.fillText(shareCardTitle.textContent, 40, 400, 400);
+      ctx.font = '16px sans-serif';
+      ctx.fillStyle = '#5d6b64';
+      ctx.fillText(shareCardMeta.textContent, 40, 430, 400);
+    }
     canvas.toBlob((poster) => {
       if (!poster) return;
       if (posterUrl) URL.revokeObjectURL(posterUrl);
@@ -759,8 +844,9 @@ createButton.addEventListener('click', async () => {
     if (exportController.signal.aborted || (error instanceof DOMException && error.name === 'AbortError')) {
       progressLabel.textContent = locale === 'en' ? 'Cancelled' : '已取消產出影片';
       progress.value = 0;
+      etaLabel.textContent = '';
     } else {
-      setError(localizeError(error, locale === 'en' ? 'Video creation failed.' : '產出影片失敗。'));
+      showClassifiedError(error, locale, setError, errorHint);
       progressLabel.textContent = locale === 'en' ? 'Could not create video' : '無法產出影片';
     }
   } finally {
@@ -771,7 +857,7 @@ createButton.addEventListener('click', async () => {
     cancelButton.classList.add('hidden');
     refreshActionAvailability();
   }
-});
+}
 
 shareButton.addEventListener('click', async () => {
   if (!resultFile || typeof navigator.share !== 'function') return;
@@ -826,7 +912,7 @@ async function startHeroDemo(): Promise<void> {
     const response = await fetch(`${import.meta.env.BASE_URL}sample-timeline.json`);
     if (!response.ok) return;
     const points = parseTimelineJson(JSON.parse(await response.text()));
-    const journey = await prepareJourney(points, 360, 360, 'steady', 10, 'balanced');
+    const journey = await prepareJourney(points, 360, 360, 'steady', 10, 'balanced', 'light');
     const loop = (now: number): void => {
       const elapsed = (now / 1000) % totalDurationSeconds(8, 1.5);
       const frame = frameAtElapsedSeconds(elapsed, 8, 1.5);
@@ -855,6 +941,27 @@ visitCount.textContent = locale === 'en'
 
 applyI18n();
 void startHeroDemo();
+
+wireAdvancedControls({
+  locale: () => locale,
+  allPoints: () => allPoints,
+  setPointsSelection: () => undefined,
+  currentPoints,
+  selectedDistanceKm,
+  updateSelection,
+  requireMapConsent,
+  runExportOnce,
+  setError,
+  setSettingsError,
+  getTitle: () => titleInput.value.trim() || (locale === 'en' ? 'My Journey' : '我的旅程'),
+  getPeriodLabel: currentPeriodLabel,
+  canvas,
+});
+
+['map-style-select', 'marker-style-select', 'chapter-select', 'preview-speed-select', 'privacy-blur-toggle', 'compare-toggle', 'compare-year-input']
+  .forEach((id) => {
+    document.getElementById(id)?.addEventListener('change', updateSelection);
+  });
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {

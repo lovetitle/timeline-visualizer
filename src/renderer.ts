@@ -7,6 +7,8 @@ import {
   worldPositionAtDistance,
 } from './camera';
 import { cumulativeDistances, overviewRouteSegments, project, unwrapWorldPoints } from './geo';
+import { MAP_STYLES, type MapStyleId, type MarkerStyleId } from './mapStyles';
+import { getCachedTile, setCachedTile } from './tileCache';
 import { createDistanceAtProgress, type CompressionMode } from './timing';
 import type {
   CameraMovement,
@@ -18,8 +20,6 @@ import type {
   WorldPoint,
 } from './types';
 
-const TILE_TEMPLATE = 'https://a.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png';
-
 const DEFAULT_STYLE: DrawStyle = {
   route: '#c45c26',
   routeFade: 'rgba(196, 92, 38, 0.34)',
@@ -28,6 +28,7 @@ const DEFAULT_STYLE: DrawStyle = {
   titleBg: 'rgba(255, 248, 242, 0.88)',
   title: '#1c2a24',
   subtitle: '#5d6b64',
+  markerStyle: 'dot',
 };
 
 function worldToCanvas(
@@ -52,7 +53,7 @@ function tileKey(tile: TileCoordinate): string {
   return `${tile.zoom}/${tile.x}/${tile.y}`;
 }
 
-function loadImage(url: string, signal?: AbortSignal): Promise<HTMLImageElement> {
+function loadImage(url: string, cacheKey: string, signal?: AbortSignal): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const image = new Image();
     image.crossOrigin = 'anonymous';
@@ -75,7 +76,21 @@ function loadImage(url: string, signal?: AbortSignal): Promise<HTMLImageElement>
       return;
     }
     signal?.addEventListener('abort', abort, { once: true });
-    image.src = url;
+    void getCachedTile(cacheKey).then(async (cached) => {
+      if (cached) {
+        image.src = URL.createObjectURL(cached);
+        return;
+      }
+      try {
+        const response = await fetch(url, { signal });
+        if (!response.ok) throw new Error('tile fetch failed');
+        const blob = await response.blob();
+        void setCachedTile(cacheKey, blob);
+        image.src = URL.createObjectURL(blob);
+      } catch {
+        image.src = url;
+      }
+    });
   });
 }
 
@@ -131,10 +146,12 @@ function drawMapBackground(
 
 async function loadRequiredTiles(
   coordinates: TileCoordinate[],
+  mapStyle: MapStyleId,
   signal?: AbortSignal,
   onProgress?: (completed: number, total: number) => void,
 ): Promise<Map<string, HTMLImageElement>> {
   const tiles = new Map<string, HTMLImageElement>();
+  const template = MAP_STYLES[mapStyle].url;
   let nextIndex = 0;
   let completed = 0;
   const worker = async (): Promise<void> => {
@@ -142,11 +159,12 @@ async function loadRequiredTiles(
       if (signal?.aborted) throw new DOMException('已取消產出影片。', 'AbortError');
       const coordinate = coordinates[nextIndex];
       nextIndex += 1;
-      const url = TILE_TEMPLATE.replace('{z}', String(coordinate.zoom))
+      const url = template.replace('{z}', String(coordinate.zoom))
         .replace('{x}', String(coordinate.x))
         .replace('{y}', String(coordinate.y));
+      const key = `${mapStyle}:${tileKey(coordinate)}`;
       try {
-        tiles.set(tileKey(coordinate), await loadImage(url, signal));
+        tiles.set(tileKey(coordinate), await loadImage(url, key, signal));
       } catch (error) {
         if (signal?.aborted || (error instanceof DOMException && error.name === 'AbortError')) throw error;
       }
@@ -165,6 +183,7 @@ export async function prepareJourney(
   cameraMovement: CameraMovement = 'steady',
   durationSeconds = 30,
   compression: CompressionMode = 'balanced',
+  mapStyle: MapStyleId = 'light',
   signal?: AbortSignal,
   onProgress?: (completed: number, total: number) => void,
 ): Promise<PreparedJourney> {
@@ -201,7 +220,7 @@ export async function prepareJourney(
     const ending = blendViewport(journeyEnd, endingOverview, easeOutCubic(sample / 12), size);
     for (const tile of requiredTiles(ending)) required.set(tileKey(tile), tile);
   }
-  const tiles = await loadRequiredTiles([...required.values()], signal, onProgress);
+  const tiles = await loadRequiredTiles([...required.values()], mapStyle, signal, onProgress);
   return {
     ...journey,
     overviewRouteSegments: overviewSegments,
@@ -216,6 +235,46 @@ function pointAtProgress(journey: PreparedJourney, progress: number): { point: W
   const distanceKm = journey.distanceAtProgress(progress);
   const position = worldPositionAtDistance(journey, distanceKm);
   return { point: position.point, completedIndex: position.fromIndex };
+}
+
+function drawMarker(
+  context: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  size: number,
+  markerStyle: MarkerStyleId,
+  fill: string,
+  ring: string,
+): void {
+  const radius = Math.max(8, size / 72);
+  context.fillStyle = fill;
+  context.strokeStyle = ring;
+  context.lineWidth = Math.max(3, size / 160);
+  if (markerStyle === 'plane') {
+    context.beginPath();
+    context.moveTo(x, y - radius * 1.6);
+    context.lineTo(x + radius * 1.2, y + radius);
+    context.lineTo(x, y + radius * 0.4);
+    context.lineTo(x - radius * 1.2, y + radius);
+    context.closePath();
+    context.fill();
+    context.stroke();
+    return;
+  }
+  if (markerStyle === 'foot') {
+    context.beginPath();
+    context.ellipse(x - radius * 0.45, y, radius * 0.55, radius * 0.9, -0.25, 0, Math.PI * 2);
+    context.ellipse(x + radius * 0.45, y + radius * 0.15, radius * 0.5, radius * 0.85, 0.25, 0, Math.PI * 2);
+    context.fill();
+    context.stroke();
+    return;
+  }
+  context.beginPath();
+  context.arc(x, y, radius, 0, Math.PI * 2);
+  context.fill();
+  context.beginPath();
+  context.arc(x, y, radius * 1.55, 0, Math.PI * 2);
+  context.stroke();
 }
 
 function strokeRoute(
@@ -287,18 +346,26 @@ export function drawFrame(
   );
   const [headX, headY] = worldToCanvas(current.point, viewport, width, height);
 
+  if (style.compareWorldPoints && style.compareWorldPoints.length > 1) {
+    context.save();
+    context.globalAlpha = 0.35;
+    context.strokeStyle = '#1f6feb';
+    context.lineWidth = Math.max(3, size / 160);
+    strokeRoute(
+      context,
+      style.compareWorldPoints.slice(0, -1),
+      style.compareWorldPoints.at(-1)!,
+      viewport,
+      width,
+      height,
+    );
+    context.restore();
+  }
+
   context.shadowColor = 'rgba(36, 25, 29, 0.35)';
   context.shadowBlur = 10;
-  context.fillStyle = style.marker;
-  context.beginPath();
-  context.arc(headX, headY, Math.max(8, size / 72), 0, Math.PI * 2);
-  context.fill();
+  drawMarker(context, headX, headY, size, style.markerStyle ?? 'dot', style.marker, style.markerRing);
   context.shadowBlur = 0;
-  context.strokeStyle = style.markerRing;
-  context.lineWidth = Math.max(4, size / 144);
-  context.beginPath();
-  context.arc(headX, headY, Math.max(13, size / 45), 0, Math.PI * 2);
-  context.stroke();
   context.restore();
 
   if (frame.outroProgress > 0) {
@@ -320,7 +387,7 @@ export function drawFrame(
   }
 
   const scale = size / 720;
-  const bannerHeight = style.placeLabel ? 132 * scale : 104 * scale;
+  const bannerHeight = (style.placeLabel || style.chapterLabel) ? 150 * scale : 104 * scale;
   context.fillStyle = style.titleBg;
   context.beginPath();
   context.roundRect(34 * scale, 28 * scale, width - 68 * scale, bannerHeight, 24 * scale);
@@ -332,10 +399,15 @@ export function drawFrame(
   context.fillStyle = style.subtitle;
   context.font = `${20 * scale}px "Segoe UI", "PingFang TC", "Noto Sans TC", sans-serif`;
   context.fillText(periodLabel, width / 2, 108 * scale);
+  if (style.chapterLabel) {
+    context.fillStyle = style.route;
+    context.font = `700 ${20 * scale}px "Segoe UI", "PingFang TC", "Noto Sans TC", sans-serif`;
+    context.fillText(style.chapterLabel, width / 2, 136 * scale);
+  }
   if (style.placeLabel) {
     context.fillStyle = style.route;
     context.font = `700 ${22 * scale}px "Segoe UI", "PingFang TC", "Noto Sans TC", sans-serif`;
-    context.fillText(style.placeLabel, width / 2, 138 * scale);
+    context.fillText(style.placeLabel, width / 2, style.chapterLabel ? 162 * scale : 138 * scale);
   }
 
   context.textAlign = 'right';

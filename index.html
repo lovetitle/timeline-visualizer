@@ -10,6 +10,7 @@
     <title>時間軸視覺化</title>
   </head>
   <body>
+    <a class="skip-link" href="#file-heading">跳到主要內容</a>
     <div class="page">
       <header class="hero">
         <div class="hero-top">
@@ -24,6 +25,10 @@
             <p class="eyebrow" data-i18n="brandEyebrow">本機處理 · 不上傳時間軸</p>
             <h1 data-i18n="brandTitle">把 Google 時間軸<br />做成旅行影片</h1>
             <p class="lede" data-i18n="brandLede">選擇匯出的 Timeline.json、GPX 或 KML，預覽移動路徑，再在瀏覽器裡產出 MP4。時間軸資料不會離開這台裝置，只有地圖圖磚會向 CARTO 請求。</p>
+            <p class="hero-links">
+              <a href="./updates.html">更新公告</a>
+              <a href="./faq.html">常見問題</a>
+            </p>
           </div>
           <canvas id="hero-demo-canvas" width="360" height="360" aria-label="範例旅程動畫"></canvas>
         </div>
@@ -176,6 +181,48 @@
                 <li>若從未開啟時間軸備份，被刪除的舊行程通常無法救回；之後請在時間軸頁開啟加密備份，避免再遺失。</li>
               </ul>
             </details>
+
+            <div class="tutorial-frames" aria-label="匯出步驟示意">
+              <figure class="tutorial-frame">
+                <svg viewBox="0 0 120 220" width="100" height="184" role="img" aria-label="步驟一：地圖">
+                  <rect x="4" y="4" width="112" height="212" rx="18" fill="#1c2a24" />
+                  <rect x="12" y="18" width="96" height="172" rx="6" fill="#e8f0ea" />
+                  <circle cx="60" cy="90" r="28" fill="none" stroke="#2e5444" stroke-width="2" opacity="0.35" />
+                  <path d="M30 130 Q50 70 70 100 T100 85" fill="none" stroke="#c45c26" stroke-width="3" stroke-linecap="round" />
+                  <circle cx="70" cy="100" r="5" fill="#c45c26" />
+                  <text x="60" y="200" text-anchor="middle" fill="#f6f3ee" font-size="11" font-family="sans-serif">地圖</text>
+                </svg>
+                <figcaption>1. 打開地圖</figcaption>
+              </figure>
+              <figure class="tutorial-frame">
+                <svg viewBox="0 0 120 220" width="100" height="184" role="img" aria-label="步驟二：設定">
+                  <rect x="4" y="4" width="112" height="212" rx="18" fill="#1c2a24" />
+                  <rect x="12" y="18" width="96" height="172" rx="6" fill="#fff8f2" />
+                  <circle cx="36" cy="42" r="10" fill="#ead9cc" />
+                  <rect x="52" y="36" width="44" height="6" rx="3" fill="#d7cfc4" />
+                  <rect x="52" y="46" width="28" height="4" rx="2" fill="#ead9cc" />
+                  <rect x="22" y="70" width="76" height="14" rx="4" fill="#f3e2d4" />
+                  <rect x="22" y="92" width="76" height="14" rx="4" fill="#f3e2d4" />
+                  <rect x="22" y="114" width="76" height="14" rx="4" fill="#c45c26" opacity="0.85" />
+                  <text x="60" y="124" text-anchor="middle" fill="#fff" font-size="8" font-family="sans-serif">位置和隱私</text>
+                  <text x="60" y="200" text-anchor="middle" fill="#f6f3ee" font-size="11" font-family="sans-serif">設定</text>
+                </svg>
+                <figcaption>2. 進入設定</figcaption>
+              </figure>
+              <figure class="tutorial-frame">
+                <svg viewBox="0 0 120 220" width="100" height="184" role="img" aria-label="步驟三：匯出">
+                  <rect x="4" y="4" width="112" height="212" rx="18" fill="#1c2a24" />
+                  <rect x="12" y="18" width="96" height="172" rx="6" fill="#fff8f2" />
+                  <rect x="28" y="48" width="64" height="72" rx="8" fill="#efe8de" stroke="#c45c26" stroke-width="1.5" />
+                  <path d="M60 70 v28 M48 88 l12 12 12-12" fill="none" stroke="#c45c26" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
+                  <text x="60" y="138" text-anchor="middle" fill="#8a4a24" font-size="9" font-family="sans-serif">Timeline.json</text>
+                  <rect x="30" y="152" width="60" height="18" rx="6" fill="#c45c26" />
+                  <text x="60" y="164" text-anchor="middle" fill="#fff" font-size="8" font-family="sans-serif">匯出檔案</text>
+                  <text x="60" y="200" text-anchor="middle" fill="#f6f3ee" font-size="11" font-family="sans-serif">匯出</text>
+                </svg>
+                <figcaption>3. 匯出檔案</figcaption>
+              </figure>
+            </div>
           </div>
         </section>
 
@@ -220,7 +267,26 @@
             </div>
           </div>
 
+          <div class="smart-actions" role="group" aria-label="智慧選取">
+            <button id="smart-this-year" class="ghost" type="button">今年行程</button>
+            <button id="smart-recent" class="ghost" type="button">最近旅程</button>
+            <button id="smart-abroad" class="ghost" type="button">海外行程</button>
+            <button id="smart-trim" class="ghost" type="button">裁切雜訊</button>
+          </div>
+
           <ul id="merge-list" class="merge-list" aria-label="已合併的旅程區間"></ul>
+
+          <label>
+            <span>影片模板</span>
+            <select id="template-select">
+              <option value="">（手動設定）</option>
+              <option value="island">環島日記</option>
+              <option value="business">出差紀實</option>
+              <option value="honeymoon">蜜月旅程</option>
+              <option value="city">城市漫步</option>
+            </select>
+          </label>
+          <button id="suggest-duration-button" class="ghost" type="button">依距離建議片長</button>
 
           <label>
             <span data-i18n="videoTitle">影片標題</span>
@@ -294,10 +360,64 @@
             </label>
           </div>
 
+          <div class="field-grid">
+            <label>
+              <span>地圖樣式</span>
+              <select id="map-style-select">
+                <option value="light" selected>淺色</option>
+                <option value="dark">深色</option>
+                <option value="voyager">Voyager</option>
+              </select>
+            </label>
+            <label>
+              <span>標記樣式</span>
+              <select id="marker-style-select">
+                <option value="dot" selected>圓點</option>
+                <option value="plane">飛機</option>
+                <option value="foot">步行</option>
+              </select>
+            </label>
+          </div>
+
+          <div class="field-grid">
+            <label>
+              <span>章節分段</span>
+              <select id="chapter-select">
+                <option value="off" selected>關閉</option>
+                <option value="day">依日</option>
+                <option value="city">依城市</option>
+              </select>
+            </label>
+            <label>
+              <span>預覽速度</span>
+              <select id="preview-speed-select">
+                <option value="1" selected>1×</option>
+                <option value="2">2×</option>
+                <option value="4">4×</option>
+              </select>
+            </label>
+          </div>
+
           <label class="checkbox-row" for="place-labels-toggle">
             <input id="place-labels-toggle" type="checkbox" checked />
             <span data-i18n="placeLabels">顯示地名字幕</span>
           </label>
+
+          <label class="checkbox-row" for="privacy-blur-toggle">
+            <input id="privacy-blur-toggle" type="checkbox" />
+            <span>模糊住家附近</span>
+          </label>
+
+          <div class="field-grid">
+            <label>
+              <span>對照年份（選填）</span>
+              <input id="compare-year-input" type="number" min="2000" max="2100" step="1" inputmode="numeric" placeholder="例如 2024" />
+            </label>
+            <label class="checkbox-row" for="compare-toggle">
+              <input id="compare-toggle" type="checkbox" />
+              <span>與該年對照</span>
+            </label>
+          </div>
 
           <label>
             <span data-i18n="outroHold">片尾定格（秒）</span>
@@ -308,6 +428,12 @@
             <span data-i18n="bgm">背景音樂（本機音檔，可選）</span>
             <input id="bgm-file" type="file" accept="audio/*" />
           </label>
+
+          <div class="batch-panel">
+            <button id="batch-add-button" class="ghost" type="button">加入批次佇列</button>
+            <ul id="batch-list" class="batch-list" aria-label="批次佇列"></ul>
+            <button id="batch-run-button" class="secondary" type="button">執行批次產出</button>
+          </div>
 
           <p id="selection-summary" class="status"></p>
 
@@ -320,16 +446,24 @@
             </label>
           </div>
           <p id="settings-error" class="error hidden" role="alert"></p>
+          <p id="error-hint" class="status muted" role="status"></p>
           <div class="actions">
             <button id="preview-button" class="secondary" type="button" data-i18n="preview">預覽</button>
             <button id="create-button" type="button" disabled data-i18n="create">產出 MP4</button>
+          </div>
+          <div class="actions">
+            <button id="export-gpx-button" class="secondary" type="button">匯出 GPX</button>
+            <button id="export-geojson-button" class="secondary" type="button">匯出 GeoJSON</button>
           </div>
         </section>
 
         <section id="preview-card" class="panel preview-panel hidden" aria-labelledby="preview-heading">
           <div class="section-heading">
             <h2 id="preview-heading">預覽</h2>
-            <span id="progress-label">就緒</span>
+            <span>
+              <span id="progress-label">就緒</span>
+              <span id="eta-label" class="muted"></span>
+            </span>
           </div>
           <canvas id="journey-canvas" width="480" height="480"></canvas>
           <progress id="export-progress" class="hidden" value="0" max="1"></progress>
@@ -342,12 +476,21 @@
             <button id="copy-link-button" class="secondary" type="button" data-i18n="copyLink">複製網站連結</button>
             <button id="download-poster-button" class="secondary" type="button" data-i18n="downloadPoster">下載預覽圖</button>
           </div>
+          <div id="share-card" class="share-card hidden">
+            <h3 id="share-card-title">分享卡片</h3>
+            <p id="share-card-meta" class="muted"></p>
+            <canvas id="share-card-canvas" width="480" height="480"></canvas>
+          </div>
         </section>
       </div>
 
       <footer>
         <p>不需要帳號、定位權限，也不會上傳時間軸。地圖資料 © OpenStreetMap contributors 與 © CARTO。</p>
         <p>
+          <a href="./updates.html">更新公告</a>
+          ·
+          <a href="./faq.html">常見問題</a>
+          ·
           <a id="report-issue" href="mailto:timeline-visualizer@example.com?subject=%E6%99%82%E9%96%93%E8%BB%B8%E8%A6%96%E8%A6%BA%E5%8C%96%20%E5%95%8F%E9%A1%8C%E5%9B%9E%E5%A0%B1" data-i18n="reportIssue">回報問題</a>
         </p>
         <p id="pwa-hint" data-i18n="installPwa">加到主畫面提示：用瀏覽器選單「安裝應用程式」或「加入主畫面」。</p>
