@@ -24,6 +24,8 @@ export interface ExportOptions {
   audioBuffer?: AudioBuffer | null;
   onProgress?: (fraction: number) => void;
   signal?: AbortSignal;
+  /** When paused is true, encoding waits without aborting. */
+  pauseGate?: { paused: boolean };
 }
 
 export function hasVideoEncoder(): boolean {
@@ -167,6 +169,13 @@ async function encodeWithCodec(
   }
 
   for (let frame = 0; frame < frameCount; frame += 1) {
+    while (options.pauseGate?.paused) {
+      if (options.signal?.aborted) {
+        await output.cancel();
+        throw new DOMException('已取消產出影片。', 'AbortError');
+      }
+      await new Promise((resolve) => setTimeout(resolve, 120));
+    }
     if (options.signal?.aborted) {
       await output.cancel();
       throw new DOMException('已取消產出影片。', 'AbortError');

@@ -17,11 +17,13 @@ import {
   wireAdvancedControls,
 } from './advanced';
 import { frameAtElapsedSeconds, totalDurationSeconds } from './animation';
+import { applyBrandToDom, loadBrand, saveBrand } from './brand';
 import { downsamplePoints, suggestMaxPoints } from './downsample';
 import { downloadText } from './exportTrack';
 import { refreshExtrasLabels, wireExtras } from './extras';
-import { formatById, VIDEO_FORMATS } from './formats';
+import { formatById } from './formats';
 import { cumulativeDistances } from './geo';
+import { applyGuideLocale } from './guideI18n';
 import { drawHeatmapPoster } from './heatmap';
 import { t, type Locale } from './i18n';
 import { detectImportKind, parseGpx, parseKml } from './importFormats';
@@ -31,9 +33,11 @@ import { recordEncodePerf } from './perf';
 import { placeLabelAtProgress } from './places';
 import { drawFrame, prepareJourney } from './renderer';
 import { withRetry } from './retry';
+import { getCachedSampleVideo, setCachedSampleVideo } from './sampleVideoCache';
+import { applySelectLocale } from './selectI18n';
 import { pushRecent } from './settingsStore';
 import { buildJourneySrt } from './srt';
-import { themeById, THEMES } from './themes';
+import { themeById } from './themes';
 import type { CompressionMode } from './timing';
 import {
   availableMonths,
@@ -105,6 +109,12 @@ const canvas = element<HTMLCanvasElement>('journey-canvas');
 const previewButton = element<HTMLButtonElement>('preview-button');
 const createButton = element<HTMLButtonElement>('create-button');
 const cancelButton = element<HTMLButtonElement>('cancel-button');
+const pauseButton = element<HTMLButtonElement>('pause-button');
+const playSampleVideoButton = element<HTMLButtonElement>('play-sample-video');
+const sampleResultVideo = element<HTMLVideoElement>('sample-result-video');
+const brandSiteName = element<HTMLInputElement>('brand-site-name');
+const brandTagline = element<HTMLInputElement>('brand-tagline');
+const brandSave = element<HTMLButtonElement>('brand-save');
 const progress = element<HTMLProgressElement>('export-progress');
 const progressLabel = element<HTMLSpanElement>('progress-label');
 const errorMessage = element<HTMLParagraphElement>('error-message');
@@ -158,16 +168,11 @@ let isExporting = false;
 let isPreparing = false;
 let mergeMode = false;
 let exportController: AbortController | null = null;
+const pauseGate = { paused: false };
 let audioBuffer: AudioBuffer | null = null;
 let outlierRemoved = 0;
 const mergeLabels: string[] = [];
 
-themeSelect.replaceChildren(...THEMES.map((theme) => (
-  new Option(locale === 'en' ? theme.labelEn : theme.labelZh, theme.id)
-)));
-formatSelect.replaceChildren(...VIDEO_FORMATS.map((format) => (
-  new Option(locale === 'en' ? format.labelEn : format.labelZh, format.id)
-)));
 langSelect.value = locale;
 
 function activityPaceEnabled(): boolean {
@@ -184,19 +189,19 @@ function applyI18n(): void {
   document.querySelectorAll<HTMLElement>('[data-i18n]').forEach((node) => {
     const key = node.dataset.i18n as Parameters<typeof t>[1];
     if (!key) return;
+    // Skip brand-customized headline unless empty brand tagline.
+    if (key === 'brandTitle' && loadBrand().tagline.trim()) return;
     const text = t(locale, key);
     if (key === 'brandTitle') node.innerHTML = text.replaceAll('\n', '<br />');
     else node.textContent = text;
   });
-  themeSelect.replaceChildren(...THEMES.map((theme) => (
-    new Option(isEnglishLike() ? theme.labelEn : theme.labelZh, theme.id)
-  )));
-  formatSelect.replaceChildren(...VIDEO_FORMATS.map((format) => (
-    new Option(isEnglishLike() ? format.labelEn : format.labelZh, format.id)
-  )));
+  applyGuideLocale(locale);
+  applySelectLocale(locale);
   versionLabel.textContent = `${t(locale, 'versionLabel')} ${APP_VERSION}`;
   const themeToggle = document.getElementById('theme-mode-toggle');
   if (themeToggle) themeToggle.setAttribute('title', t(locale, 'darkMode'));
+  if (!pauseGate.paused) pauseButton.textContent = t(locale, 'pauseEncode');
+  applyBrandToDom(loadBrand());
 }
 
 function localizeError(error: unknown, fallback: string): string {
@@ -823,8 +828,17 @@ previewButton.addEventListener('click', async () => {
 
 cancelButton.addEventListener('click', () => {
   cancelButton.disabled = true;
-  progressLabel.textContent = locale === 'en' ? 'Cancelling…' : '正在取消…';
+  pauseGate.paused = false;
+  progressLabel.textContent = isEnglishLike() ? 'Cancelling…' : '正在取消…';
   exportController?.abort();
+});
+
+pauseButton.addEventListener('click', () => {
+  pauseGate.paused = !pauseGate.paused;
+  pauseButton.textContent = pauseGate.paused ? t(locale, 'resumeEncode') : t(locale, 'pauseEncode');
+  if (pauseGate.paused) {
+    progressLabel.textContent = isEnglishLike() ? 'Paused' : '已暫停';
+  }
 });
 
 createButton.addEventListener('click', () => {
@@ -842,7 +856,10 @@ async function runExportOnce(): Promise<void> {
   previewCard.classList.remove('hidden');
   progress.classList.remove('hidden');
   cancelButton.classList.remove('hidden');
+  pauseButton.classList.remove('hidden');
   cancelButton.disabled = false;
+  pauseGate.paused = false;
+  pauseButton.textContent = t(locale, 'pauseEncode');
   progress.value = 0;
   stickyProgressBar.value = 0;
   etaLabel.textContent = '';
@@ -859,7 +876,7 @@ async function runExportOnce(): Promise<void> {
     progressLabel.textContent = label;
     stickyProgressBar.value = fraction;
     stickyProgressLabel.textContent = label;
-    if (fraction > 0.05) {
+    if (fraction > 0.05 && !pauseGate.paused) {
       const elapsed = (performance.now() - startedAt) / 1000;
       const remaining = elapsed / fraction - elapsed;
       etaLabel.textContent = formatEta(remaining, uiLocale(locale));
@@ -887,6 +904,7 @@ async function runExportOnce(): Promise<void> {
         locale: uiLocale(locale),
         audioBuffer,
         signal: exportController!.signal,
+        pauseGate,
         onProgress: (fraction) => {
           updateProgress(
             fraction,
@@ -960,10 +978,12 @@ async function runExportOnce(): Promise<void> {
     await wakeLock?.release().catch(() => undefined);
     exportController = null;
     isExporting = false;
+    pauseGate.paused = false;
     document.body.classList.remove('is-exporting');
     stickyProgress.classList.add('hidden');
     window.removeEventListener('beforeunload', beforeUnloadGuard);
     cancelButton.classList.add('hidden');
+    pauseButton.classList.add('hidden');
     refreshActionAvailability();
   }
 }
@@ -1143,6 +1163,60 @@ visitCount.textContent = isEnglishLike()
   : `此裝置本機造訪次數：${visits}`;
 
 applyI18n();
+const brand = loadBrand();
+brandSiteName.value = brand.siteName;
+brandTagline.value = brand.tagline;
+brandSave.addEventListener('click', () => {
+  const next = {
+    siteName: brandSiteName.value.trim() || 'Timeline Visualizer',
+    tagline: brandTagline.value.trim(),
+    customDomainNote: '',
+  };
+  saveBrand(next);
+  applyBrandToDom(next);
+  if (!next.tagline) applyI18n();
+});
+
+playSampleVideoButton.addEventListener('click', async () => {
+  playSampleVideoButton.disabled = true;
+  try {
+    let blob = await getCachedSampleVideo();
+    if (!blob) {
+      playSampleVideoButton.textContent = isEnglishLike() ? 'Encoding sample…' : '正在編碼範例…';
+      const response = await fetch(`${import.meta.env.BASE_URL}sample-timeline.json`);
+      if (!response.ok) throw new Error('sample missing');
+      const points = parseTimelineJson(JSON.parse(await response.text()));
+      const offscreen = document.createElement('canvas');
+      offscreen.width = 480;
+      offscreen.height = 480;
+      const journey = await prepareJourney(points, 480, 480, 'steady', 8, 'balanced', 'light');
+      blob = await createJourneyMp4(offscreen, journey, {
+        durationSeconds: 8,
+        title: isEnglishLike() ? 'Sample Journey' : '範例旅程',
+        periodLabel: isEnglishLike() ? 'Demo' : '示範',
+        style: {
+          ...themeById('ember'),
+          markerStyle: 'dot',
+        },
+        outroHoldSeconds: 1.5,
+        showPlaceLabels: true,
+        chapterMode: 'off',
+        locale: uiLocale(locale),
+      });
+      await setCachedSampleVideo(blob);
+    }
+    sampleResultVideo.src = URL.createObjectURL(blob);
+    sampleResultVideo.classList.remove('hidden');
+    heroDemoCanvas.classList.add('hidden');
+    await sampleResultVideo.play();
+  } catch (error) {
+    setError(localizeError(error, isEnglishLike() ? 'Could not play sample video.' : '無法播放範例影片。'));
+  } finally {
+    playSampleVideoButton.disabled = false;
+    playSampleVideoButton.textContent = t(locale, 'playSampleVideo');
+  }
+});
+
 void startHeroDemo();
 startTutorialPlayer();
 

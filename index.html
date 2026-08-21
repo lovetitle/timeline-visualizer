@@ -38,10 +38,15 @@
               <a href="./updates.html" data-i18n="updatesLink">更新公告</a>
               <a href="./faq.html" data-i18n="faqLink">常見問題</a>
               <a href="./privacy.html" data-i18n="privacyLink">隱私報告</a>
+              <a href="./domain.html" data-i18n="domainLink">自訂網域</a>
             </p>
             <p class="shortcut-hint muted" data-i18n="shortcutHint">快捷鍵：空白鍵預覽 · Enter 產出</p>
           </div>
+          <div class="hero-media">
           <canvas id="hero-demo-canvas" width="360" height="360" aria-label="範例旅程動畫"></canvas>
+          <video id="sample-result-video" class="hidden" controls playsinline></video>
+          <button id="play-sample-video" class="ghost" type="button" data-i18n="playSampleVideo">播放範例影片</button>
+        </div>
         </div>
       </header>
 
@@ -67,22 +72,13 @@
           <p id="compatibility-status" class="status muted" data-i18n="checkingVideo">正在檢查影片編碼支援…</p>
 
           <div id="empty-timeline-banner" class="empty-timeline-banner hidden" role="status">
-            <strong>時間軸是空的？先還原再匯出</strong>
-            <ol class="restore-steps">
-              <li>開啟 Google 地圖 → 頭像 →「你的時間軸」。</li>
-              <li>點右上角雲端／備份圖示，選擇有備份的裝置。</li>
-              <li>「更多」→「匯入」，確認造訪記錄出現。</li>
-              <li>再依下方步驟重新匯出 JSON，並載入到這裡。</li>
-            </ol>
+            <strong id="empty-title">時間軸是空的？先還原再匯出</strong>
+            <ol id="empty-steps" class="restore-steps"></ol>
           </div>
 
           <div class="export-guide">
             <h3 data-i18n="exportGuideTitle">還沒有檔案？從手機匯出</h3>
-            <p class="guide-intro" data-i18n="exportGuideIntro">
-              Google <strong>不能</strong>用登入直接抓時間軸。資料存在手機裡，必須先匯出檔案。正確路徑：
-              <strong>地圖 → 頭像 → 設定 → 位置和隱私 → 匯出檔案</strong>。
-            </p>
-
+            <p id="guide-intro-text" class="guide-intro"></p>
             <div class="platform-switch">
               <input type="radio" name="export-platform" id="guide-android" checked />
               <input type="radio" name="export-platform" id="guide-iphone" />
@@ -90,153 +86,63 @@
                 <label for="guide-android">Android</label>
                 <label for="guide-iphone">iPhone</label>
               </div>
-
               <ol class="guide-android steps">
                 <li>
-                  <span class="step-title">
-                    <svg class="step-icon" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8">
-                      <rect x="7" y="2.5" width="10" height="19" rx="2.2" />
-                      <circle cx="12" cy="18.2" r="0.9" fill="currentColor" stroke="none" />
-                    </svg>
-                    打開 Google 地圖
-                  </span>
-                  <span class="step-body">請開「地圖」App，不要用手機系統設定。</span>
+                  <span class="step-title"><svg class="step-icon" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="7" y="2.5" width="10" height="19" rx="2.2" /><circle cx="12" cy="18.2" r="0.9" fill="currentColor" stroke="none" /></svg><span id="android-open-title"></span></span>
+                  <span id="android-open-body" class="step-body"></span>
                 </li>
                 <li>
-                  <span class="step-title">
-                    <svg class="step-icon" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8">
-                      <circle cx="12" cy="8" r="3.2" />
-                      <path d="M5 19.5c1.6-3.2 4-4.8 7-4.8s5.4 1.6 7 4.8" />
-                    </svg>
-                    進入設定
-                  </span>
-                  <span class="step-path">頭像 → 設定</span>
-                  <span class="step-body">頭像在畫面右上角。</span>
+                  <span class="step-title"><svg class="step-icon" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="3.2" /><path d="M5 19.5c1.6-3.2 4-4.8 7-4.8s5.4 1.6 7 4.8" /></svg><span id="android-settings-title"></span></span>
+                  <span id="android-settings-path" class="step-path"></span>
+                  <span id="android-settings-body" class="step-body"></span>
                 </li>
                 <li>
-                  <span class="step-title">
-                    <svg class="step-icon" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8">
-                      <circle cx="12" cy="12" r="3" />
-                      <path d="M12 3.5v2.2M12 18.3v2.2M3.5 12h2.2M18.3 12h2.2M6.1 6.1l1.6 1.6M16.3 16.3l1.6 1.6M17.9 6.1l-1.6 1.6M7.7 16.3l-1.6 1.6" />
-                    </svg>
-                    匯出檔案
-                  </span>
-                  <span class="step-path">位置和隱私 → 匯出檔案</span>
-                  <span class="step-body">把檔案存到「下載」。檔名通常是 <code>Timeline.json</code>。</span>
+                  <span class="step-title"><svg class="step-icon" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3" /><path d="M12 3.5v2.2M12 18.3v2.2M3.5 12h2.2M18.3 12h2.2M6.1 6.1l1.6 1.6M16.3 16.3l1.6 1.6M17.9 6.1l-1.6 1.6M7.7 16.3l-1.6 1.6" /></svg><span id="android-export-title"></span></span>
+                  <span id="android-export-path" class="step-path"></span>
+                  <span id="android-export-body" class="step-body"></span>
                 </li>
                 <li>
-                  <span class="step-title">
-                    <svg class="step-icon" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8">
-                      <path d="M12 4v10" />
-                      <path d="M8.5 10.5 12 14l3.5-3.5" />
-                      <path d="M5 18h14" />
-                    </svg>
-                    傳到這台電腦
-                  </span>
-                  <span class="step-body">用 USB、雲端硬碟，或把檔案寄給自己。然後拖放到上方選擇區。</span>
+                  <span class="step-title"><svg class="step-icon" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 4v10" /><path d="M8.5 10.5 12 14l3.5-3.5" /><path d="M5 18h14" /></svg><span id="android-transfer-title"></span></span>
+                  <span id="android-transfer-body" class="step-body"></span>
                 </li>
               </ol>
-
               <ol class="guide-iphone steps">
                 <li>
-                  <span class="step-title">
-                    <svg class="step-icon" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8">
-                      <rect x="7" y="2.5" width="10" height="19" rx="2.2" />
-                      <circle cx="12" cy="18.2" r="0.9" fill="currentColor" stroke="none" />
-                    </svg>
-                    打開 Google 地圖
-                  </span>
-                  <span class="step-body">請開「地圖」App，不要用 iPhone 系統設定。</span>
+                  <span class="step-title"><svg class="step-icon" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="7" y="2.5" width="10" height="19" rx="2.2" /><circle cx="12" cy="18.2" r="0.9" fill="currentColor" stroke="none" /></svg><span id="iphone-open-title"></span></span>
+                  <span id="iphone-open-body" class="step-body"></span>
                 </li>
                 <li>
-                  <span class="step-title">
-                    <svg class="step-icon" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8">
-                      <circle cx="12" cy="8" r="3.2" />
-                      <path d="M5 19.5c1.6-3.2 4-4.8 7-4.8s5.4 1.6 7 4.8" />
-                    </svg>
-                    進入設定
-                  </span>
-                  <span class="step-path">頭像 → 設定</span>
-                  <span class="step-body">頭像在畫面右上角。</span>
+                  <span class="step-title"><svg class="step-icon" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="3.2" /><path d="M5 19.5c1.6-3.2 4-4.8 7-4.8s5.4 1.6 7 4.8" /></svg><span id="iphone-settings-title"></span></span>
+                  <span id="iphone-settings-path" class="step-path"></span>
+                  <span id="iphone-settings-body" class="step-body"></span>
                 </li>
                 <li>
-                  <span class="step-title">
-                    <svg class="step-icon" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8">
-                      <circle cx="12" cy="12" r="3" />
-                      <path d="M12 3.5v2.2M12 18.3v2.2M3.5 12h2.2M18.3 12h2.2M6.1 6.1l1.6 1.6M16.3 16.3l1.6 1.6M17.9 6.1l-1.6 1.6M7.7 16.3l-1.6 1.6" />
-                    </svg>
-                    匯出檔案
-                  </span>
-                  <span class="step-path">位置和隱私 → 匯出檔案</span>
-                  <span class="step-body">存到「檔案」App，例如「我的 iPhone → 下載項目」。檔名通常是 <code>Timeline.json</code>。</span>
+                  <span class="step-title"><svg class="step-icon" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3" /><path d="M12 3.5v2.2M12 18.3v2.2M3.5 12h2.2M18.3 12h2.2M6.1 6.1l1.6 1.6M16.3 16.3l1.6 1.6M17.9 6.1l-1.6 1.6M7.7 16.3l-1.6 1.6" /></svg><span id="iphone-export-title"></span></span>
+                  <span id="iphone-export-path" class="step-path"></span>
+                  <span id="iphone-export-body" class="step-body"></span>
                 </li>
                 <li>
-                  <span class="step-title">
-                    <svg class="step-icon" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8">
-                      <path d="M12 4v10" />
-                      <path d="M8.5 10.5 12 14l3.5-3.5" />
-                      <path d="M5 18h14" />
-                    </svg>
-                    傳到這台電腦
-                  </span>
-                  <span class="step-body">用 AirDrop、iCloud 雲碟或郵件把檔案傳到電腦，再拖放到上方選擇區。</span>
+                  <span class="step-title"><svg class="step-icon" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 4v10" /><path d="M8.5 10.5 12 14l3.5-3.5" /><path d="M5 18h14" /></svg><span id="iphone-transfer-title"></span></span>
+                  <span id="iphone-transfer-body" class="step-body"></span>
                 </li>
               </ol>
             </div>
-
             <details class="help-panel" open>
-              <summary>找不到選單、時間軸是空的？</summary>
-              <ul class="faq-list">
-                <li>正確路徑是：地圖 → 頭像 → 設定 → 位置和隱私 → 匯出檔案。不要用電腦版 Google 地圖。</li>
-                <li>Google Takeout 匯出的是舊格式，這個網頁通常無法使用。請改從手機匯出。</li>
-                <li>無法用 Google 帳號登入抓資料。時間軸存在手機，官方沒有提供給第三方讀取的 API。</li>
-                <li>
-                  <strong>時間軸被刪除或顯示空白時：</strong>
-                  開啟 Google 地圖 → 頭像 →「你的時間軸」→ 右上角雲端／備份圖示 → 選擇有備份的裝置 →「更多」→「匯入」。確認造訪記錄出現後，再重新匯出 JSON。
-                </li>
-                <li>若從未開啟時間軸備份，被刪除的舊行程通常無法救回；之後請在時間軸頁開啟加密備份，避免再遺失。</li>
-              </ul>
+              <summary id="guide-help-summary"></summary>
+              <ul id="guide-help-list" class="faq-list"></ul>
             </details>
-
-            <div class="tutorial-frames" aria-label="匯出步驟示意">
+            <div class="tutorial-frames" aria-label="export steps">
               <figure class="tutorial-frame">
-                <svg viewBox="0 0 120 220" width="100" height="184" role="img" aria-label="步驟一：地圖">
-                  <rect x="4" y="4" width="112" height="212" rx="18" fill="#1c2a24" />
-                  <rect x="12" y="18" width="96" height="172" rx="6" fill="#e8f0ea" />
-                  <circle cx="60" cy="90" r="28" fill="none" stroke="#2e5444" stroke-width="2" opacity="0.35" />
-                  <path d="M30 130 Q50 70 70 100 T100 85" fill="none" stroke="#c45c26" stroke-width="3" stroke-linecap="round" />
-                  <circle cx="70" cy="100" r="5" fill="#c45c26" />
-                  <text x="60" y="200" text-anchor="middle" fill="#f6f3ee" font-size="11" font-family="sans-serif">地圖</text>
-                </svg>
-                <figcaption>1. 打開地圖</figcaption>
+                <svg viewBox="0 0 120 220" width="100" height="184" role="img"><rect x="4" y="4" width="112" height="212" rx="18" fill="#1c2a24" /><rect x="12" y="18" width="96" height="172" rx="6" fill="#e8f0ea" /><path d="M30 130 Q50 70 70 100 T100 85" fill="none" stroke="#c45c26" stroke-width="3" stroke-linecap="round" /><circle cx="70" cy="100" r="5" fill="#c45c26" /></svg>
+                <figcaption id="frame-cap-1"></figcaption>
               </figure>
               <figure class="tutorial-frame">
-                <svg viewBox="0 0 120 220" width="100" height="184" role="img" aria-label="步驟二：設定">
-                  <rect x="4" y="4" width="112" height="212" rx="18" fill="#1c2a24" />
-                  <rect x="12" y="18" width="96" height="172" rx="6" fill="#fff8f2" />
-                  <circle cx="36" cy="42" r="10" fill="#ead9cc" />
-                  <rect x="52" y="36" width="44" height="6" rx="3" fill="#d7cfc4" />
-                  <rect x="52" y="46" width="28" height="4" rx="2" fill="#ead9cc" />
-                  <rect x="22" y="70" width="76" height="14" rx="4" fill="#f3e2d4" />
-                  <rect x="22" y="92" width="76" height="14" rx="4" fill="#f3e2d4" />
-                  <rect x="22" y="114" width="76" height="14" rx="4" fill="#c45c26" opacity="0.85" />
-                  <text x="60" y="124" text-anchor="middle" fill="#fff" font-size="8" font-family="sans-serif">位置和隱私</text>
-                  <text x="60" y="200" text-anchor="middle" fill="#f6f3ee" font-size="11" font-family="sans-serif">設定</text>
-                </svg>
-                <figcaption>2. 進入設定</figcaption>
+                <svg viewBox="0 0 120 220" width="100" height="184" role="img"><rect x="4" y="4" width="112" height="212" rx="18" fill="#1c2a24" /><rect x="12" y="18" width="96" height="172" rx="6" fill="#fff8f2" /><rect x="22" y="70" width="76" height="14" rx="4" fill="#f3e2d4" /><rect x="22" y="114" width="76" height="14" rx="4" fill="#c45c26" opacity="0.85" /></svg>
+                <figcaption id="frame-cap-2"></figcaption>
               </figure>
               <figure class="tutorial-frame">
-                <svg viewBox="0 0 120 220" width="100" height="184" role="img" aria-label="步驟三：匯出">
-                  <rect x="4" y="4" width="112" height="212" rx="18" fill="#1c2a24" />
-                  <rect x="12" y="18" width="96" height="172" rx="6" fill="#fff8f2" />
-                  <rect x="28" y="48" width="64" height="72" rx="8" fill="#efe8de" stroke="#c45c26" stroke-width="1.5" />
-                  <path d="M60 70 v28 M48 88 l12 12 12-12" fill="none" stroke="#c45c26" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
-                  <text x="60" y="138" text-anchor="middle" fill="#8a4a24" font-size="9" font-family="sans-serif">Timeline.json</text>
-                  <rect x="30" y="152" width="60" height="18" rx="6" fill="#c45c26" />
-                  <text x="60" y="164" text-anchor="middle" fill="#fff" font-size="8" font-family="sans-serif">匯出檔案</text>
-                  <text x="60" y="200" text-anchor="middle" fill="#f6f3ee" font-size="11" font-family="sans-serif">匯出</text>
-                </svg>
-                <figcaption>3. 匯出檔案</figcaption>
+                <svg viewBox="0 0 120 220" width="100" height="184" role="img"><rect x="4" y="4" width="112" height="212" rx="18" fill="#1c2a24" /><rect x="12" y="18" width="96" height="172" rx="6" fill="#fff8f2" /><rect x="28" y="48" width="64" height="72" rx="8" fill="#efe8de" stroke="#c45c26" stroke-width="1.5" /><path d="M60 70 v28 M48 88 l12 12 12-12" fill="none" stroke="#c45c26" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" /></svg>
+                <figcaption id="frame-cap-3"></figcaption>
               </figure>
             </div>
           </div>
@@ -244,6 +150,10 @@
 
         <section id="settings-card" class="panel hidden" aria-labelledby="settings-heading">
           <h2 id="settings-heading" data-i18n="settingsHeading">建立旅程</h2>
+          <div class="settings-accordion">
+          <details class="settings-section" open>
+            <summary data-i18n="sectionPeriod">期間與模板</summary>
+            <div class="settings-section-body">
 
           <label id="raw-signals-row" class="checkbox-row hidden">
             <input id="raw-signals-toggle" type="checkbox" />
@@ -303,7 +213,11 @@
             </select>
           </label>
           <button id="suggest-duration-button" class="ghost" type="button" data-i18n="suggestDuration">依距離建議片長</button>
-
+            </div>
+          </details>
+          <details class="settings-section" open>
+            <summary data-i18n="sectionStyle">外觀與節奏</summary>
+            <div class="settings-section-body">
           <label>
             <span data-i18n="videoTitle">影片標題</span>
             <input id="video-title" type="text" maxlength="80" value="我的旅程" />
@@ -440,6 +354,11 @@
             </label>
           </div>
 
+          </div>
+          </details>
+          <details class="settings-section">
+            <summary data-i18n="sectionAdvanced">進階與批次</summary>
+            <div class="settings-section-body">
           <div class="settings-io">
             <button id="settings-export-button" class="ghost" type="button" data-i18n="exportSettings">匯出設定</button>
             <label class="ghost file-ghost">
@@ -466,6 +385,11 @@
 
           <p id="selection-summary" class="status"></p>
 
+          </div>
+          </details>
+          <details class="settings-section" open>
+            <summary data-i18n="sectionExport">產出與匯出</summary>
+            <div class="settings-section-body">
           <div class="privacy-notice">
             <strong data-i18n="privacyNoticeTitle">載入地圖前請確認</strong>
             <p data-i18n="privacyNoticeBody">時間軸檔案不會上傳。CARTO 會收到所選旅程範圍的地圖圖磚座標，以及 IP 等一般網路資訊，可能讓圖磚供應商得知你去過的地區。</p>
@@ -484,6 +408,9 @@
             <button id="export-gpx-button" class="secondary" type="button" data-i18n="exportGpx">匯出 GPX</button>
             <button id="export-geojson-button" class="secondary" type="button" data-i18n="exportGeoJson">匯出 GeoJSON</button>
           </div>
+            </div>
+          </details>
+          </div>
         </section>
 
         <section id="preview-card" class="panel preview-panel hidden" aria-labelledby="preview-heading">
@@ -496,6 +423,7 @@
           </div>
           <canvas id="journey-canvas" width="480" height="480"></canvas>
           <progress id="export-progress" class="hidden" value="0" max="1"></progress>
+          <button id="pause-button" class="secondary cancel-button hidden" type="button" data-i18n="pauseEncode">暫停產出</button>
           <button id="cancel-button" class="secondary cancel-button hidden" type="button" data-i18n="cancel">取消產出影片</button>
           <p id="error-message" class="error hidden" role="alert"></p>
           <video id="result-video" class="hidden" controls playsinline></video>
@@ -516,6 +444,12 @@
         </section>
       </div>
 
+      <details id="brand-panel" class="panel brand-panel">
+        <summary data-i18n="brandSettings">品牌設定（本機）</summary>
+        <label><span data-i18n="brandSiteName">站名</span><input id="brand-site-name" type="text" maxlength="60" /></label>
+        <label><span data-i18n="brandTagline">自訂主標（選填，覆蓋預設標題）</span><input id="brand-tagline" type="text" maxlength="80" /></label>
+        <button id="brand-save" class="secondary" type="button" data-i18n="brandSave">套用品牌</button>
+      </details>
       <footer>
         <p data-i18n="footerBlurb">不需要帳號、定位權限，也不會上傳時間軸。地圖資料 © OpenStreetMap contributors 與 © CARTO。</p>
         <p>
@@ -524,6 +458,8 @@
           <a href="./faq.html" data-i18n="faqLink">常見問題</a>
           ·
           <a href="./privacy.html" data-i18n="privacyLink">隱私報告</a>
+          ·
+          <a href="./domain.html" data-i18n="domainLink">自訂網域</a>
           ·
           <a id="report-issue" href="mailto:timeline-visualizer@example.com?subject=%E6%99%82%E9%96%93%E8%BB%B8%E8%A6%96%E8%A6%BA%E5%8C%96%20%E5%95%8F%E9%A1%8C%E5%9B%9E%E5%A0%B1" data-i18n="reportIssue">回報問題</a>
         </p>
