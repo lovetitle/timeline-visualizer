@@ -10,6 +10,7 @@ export default defineConfig({
         main: 'index.html',
         updates: 'updates.html',
         faq: 'faq.html',
+        privacy: 'privacy.html',
       },
     },
   },

@@ -110,7 +110,7 @@ function parseOffsetInstant(startValue: unknown, endValue: unknown, offsetValue:
   return instant;
 }
 
-function addPoint(output: GeoPoint[], time: unknown, coordinate: unknown): boolean {
+function addPoint(output: GeoPoint[], time: unknown, coordinate: unknown, activityType?: string): boolean {
   const parsedTime = parseInstant(time);
   const parsed = parseCoordinate(coordinate);
   if (!parsedTime || !parsed) return false;
@@ -120,8 +120,21 @@ function addPoint(output: GeoPoint[], time: unknown, coordinate: unknown): boole
     longitude: parsed[1],
     recordedDate: parsedTime.recordedDate,
     timeZoneMissing: parsedTime.timeZoneMissing,
+    activityType,
   });
   return true;
+}
+
+function activityTypeOf(rawSegment: JsonObject): string | undefined {
+  if (!isObject(rawSegment.activity)) return undefined;
+  const candidate = rawSegment.activity.topCandidate;
+  if (isObject(candidate) && typeof candidate.type === 'string' && candidate.type.trim()) {
+    return candidate.type.trim();
+  }
+  if (typeof rawSegment.activity.type === 'string' && rawSegment.activity.type.trim()) {
+    return rawSegment.activity.type.trim();
+  }
+  return undefined;
 }
 
 function semanticInterval(startValue: unknown, endValue: unknown): TimeInterval | null {
@@ -214,14 +227,19 @@ export function parseTimelineJson(data: unknown): GeoPoint[] {
     const segmentPoints: GeoPoint[] = [];
     let semanticPointAdded = false;
     const hasPath = Array.isArray(rawSegment.timelinePath);
+    const activityType = activityTypeOf(rawSegment);
 
     if (isObject(rawSegment.activity)) {
-      semanticPointAdded = addPoint(segmentPoints, startTime, rawSegment.activity.start) || semanticPointAdded;
+      semanticPointAdded = addPoint(segmentPoints, startTime, rawSegment.activity.start, activityType)
+        || semanticPointAdded;
     }
 
     if (isObject(rawSegment.visit) && isObject(rawSegment.visit.topCandidate)) {
-      semanticPointAdded = addPoint(segmentPoints, startTime, rawSegment.visit.topCandidate.placeLocation)
-        || semanticPointAdded;
+      semanticPointAdded = addPoint(
+        segmentPoints,
+        startTime,
+        rawSegment.visit.topCandidate.placeLocation,
+      ) || semanticPointAdded;
     }
 
     if (Array.isArray(rawSegment.timelinePath)) {
@@ -239,13 +257,15 @@ export function parseTimelineJson(data: unknown): GeoPoint[] {
             recordedDate: absolute?.recordedDate
               ?? (segmentStart?.timeZoneMissing ? offsetInstant?.toISOString().slice(0, 10) : undefined),
             timeZoneMissing: absolute?.timeZoneMissing ?? segmentStart?.timeZoneMissing ?? false,
+            activityType,
           });
         }
       }
     }
 
     if (isObject(rawSegment.activity)) {
-      semanticPointAdded = addPoint(segmentPoints, endTime, rawSegment.activity.end) || semanticPointAdded;
+      semanticPointAdded = addPoint(segmentPoints, endTime, rawSegment.activity.end, activityType)
+        || semanticPointAdded;
     }
     if (segmentPoints.length > 0) {
       if (semanticPointAdded) {

@@ -9,6 +9,9 @@ import {
 import { cumulativeDistances, overviewRouteSegments, project, unwrapWorldPoints } from './geo';
 import { MAP_STYLES, type MapStyleId, type MarkerStyleId } from './mapStyles';
 import { getCachedTile, setCachedTile } from './tileCache';
+import { createActivityDistanceAtProgress } from './activity';
+import { recordTileRequest } from './privacyReport';
+import { withRetry } from './retry';
 import { createDistanceAtProgress, type CompressionMode } from './timing';
 import type {
   CameraMovement,
@@ -53,7 +56,7 @@ function tileKey(tile: TileCoordinate): string {
   return `${tile.zoom}/${tile.x}/${tile.y}`;
 }
 
-function loadImage(url: string, cacheKey: string, signal?: AbortSignal): Promise<HTMLImageElement> {
+function loadImageOnce(url: string, cacheKey: string, signal?: AbortSignal): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const image = new Image();
     image.crossOrigin = 'anonymous';
@@ -87,11 +90,19 @@ function loadImage(url: string, cacheKey: string, signal?: AbortSignal): Promise
         const blob = await response.blob();
         void setCachedTile(cacheKey, blob);
         image.src = URL.createObjectURL(blob);
-      } catch {
+      } catch (error) {
+        if (signal?.aborted || (error instanceof DOMException && error.name === 'AbortError')) {
+          abort();
+          return;
+        }
         image.src = url;
       }
     });
   });
+}
+
+function loadImage(url: string, cacheKey: string, signal?: AbortSignal): Promise<HTMLImageElement> {
+  return withRetry(() => loadImageOnce(url, cacheKey, signal), { retries: 2, delayMs: 350 });
 }
 
 export function requiredTiles(viewport: Viewport): TileCoordinate[] {
@@ -163,6 +174,7 @@ async function loadRequiredTiles(
         .replace('{x}', String(coordinate.x))
         .replace('{y}', String(coordinate.y));
       const key = `${mapStyle}:${tileKey(coordinate)}`;
+      recordTileRequest(coordinate.zoom, coordinate.x, coordinate.y, mapStyle);
       try {
         tiles.set(tileKey(coordinate), await loadImage(url, key, signal));
       } catch (error) {
@@ -186,6 +198,7 @@ export async function prepareJourney(
   mapStyle: MapStyleId = 'light',
   signal?: AbortSignal,
   onProgress?: (completed: number, total: number) => void,
+  useActivityPace = false,
 ): Promise<PreparedJourney> {
   if (points.length < 2) throw new Error('請選擇至少包含兩個定位點的期間。');
   const aspect = width / height;
@@ -198,7 +211,10 @@ export async function prepareJourney(
     cumulativeDistanceKm: distances,
     totalDistanceKm: distances.at(-1) ?? 0,
   };
-  const distanceAtProgress = createDistanceAtProgress(distances, compression);
+  const activityPace = useActivityPace
+    ? createActivityDistanceAtProgress(points, distances)
+    : null;
+  const distanceAtProgress = activityPace ?? createDistanceAtProgress(distances, compression);
   const cameraTrack = buildCameraTrack(journey, size, cameraMovement, aspect);
   const overviewSegments = overviewRouteSegments(worldPoints);
   const endingOverview = overviewViewport(

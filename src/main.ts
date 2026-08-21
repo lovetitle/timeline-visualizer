@@ -17,13 +17,22 @@ import {
   wireAdvancedControls,
 } from './advanced';
 import { frameAtElapsedSeconds, totalDurationSeconds } from './animation';
+import { downsamplePoints, suggestMaxPoints } from './downsample';
+import { downloadText } from './exportTrack';
+import { refreshExtrasLabels, wireExtras } from './extras';
 import { formatById, VIDEO_FORMATS } from './formats';
 import { cumulativeDistances } from './geo';
+import { drawHeatmapPoster } from './heatmap';
 import { t, type Locale } from './i18n';
 import { detectImportKind, parseGpx, parseKml } from './importFormats';
+import { intlLocale, uiLocale } from './localeUtil';
 import { filterLocationOutliers, type LocationFilterMode } from './outlier';
+import { recordEncodePerf } from './perf';
 import { placeLabelAtProgress } from './places';
 import { drawFrame, prepareJourney } from './renderer';
+import { withRetry } from './retry';
+import { pushRecent } from './settingsStore';
+import { buildJourneySrt } from './srt';
 import { themeById, THEMES } from './themes';
 import type { CompressionMode } from './timing';
 import {
@@ -40,11 +49,17 @@ import {
 import type { RawSignalPoint, RawSignalProcessingResult } from './timeline';
 import type { CameraMovement, GeoPoint, MonthOption, PreparedJourney } from './types';
 import { canCreateMp4, createJourneyMp4 } from './video';
+import { APP_VERSION } from './version';
 
 function element<T extends HTMLElement>(id: string): T {
   const found = document.getElementById(id);
   if (!found) throw new Error(`找不到元素 #${id}`);
   return found as T;
+}
+
+function parseLocale(value: string | null): Locale {
+  if (value === 'en' || value === 'ja' || value === 'ko') return value;
+  return 'zh';
 }
 
 const langSelect = element<HTMLSelectElement>('lang-select');
@@ -109,13 +124,23 @@ const rawOnlyDialog = element<HTMLDialogElement>('raw-only-dialog');
 const openGoogleMapsButton = element<HTMLButtonElement>('open-google-maps');
 const continueRawDataButton = element<HTMLButtonElement>('continue-raw-data');
 const visitCount = element<HTMLParagraphElement>('visit-count');
+const compareFileInput = element<HTMLInputElement>('compare-file');
+const downloadHeatmapButton = element<HTMLButtonElement>('download-heatmap-button');
+const downloadSrtButton = element<HTMLButtonElement>('download-srt-button');
+const stickyProgress = element<HTMLElement>('sticky-progress');
+const stickyProgressLabel = element<HTMLSpanElement>('sticky-progress-label');
+const stickyProgressBar = element<HTMLProgressElement>('sticky-progress-bar');
+const versionLabel = element<HTMLParagraphElement>('version-label');
 
-let locale: Locale = (localStorage.getItem('tv-locale') as Locale) || 'zh';
-let monthFormatter = new Intl.DateTimeFormat(locale === 'en' ? 'en' : 'zh-Hant-TW', { year: 'numeric', month: 'long' });
-let dateFormatter = new Intl.DateTimeFormat(locale === 'en' ? 'en' : 'zh-Hant-TW', { dateStyle: 'medium' });
+let locale: Locale = parseLocale(localStorage.getItem('tv-locale'));
+let monthFormatter = new Intl.DateTimeFormat(intlLocale(locale), { year: 'numeric', month: 'long' });
+let dateFormatter = new Intl.DateTimeFormat(intlLocale(locale), { dateStyle: 'medium' });
 
 let allPoints: GeoPoint[] = [];
 let semanticPoints: GeoPoint[] = [];
+let overlayComparePoints: GeoPoint[] = [];
+let lastSourceName = '';
+let downsampleNote = '';
 let rawSignalPoints: RawSignalPoint[] = [];
 let rawSignalProcessing: RawSignalProcessingResult | null = null;
 let pendingRawOnlyImport: { data: unknown; sourceName: string } | null = null;
@@ -145,32 +170,44 @@ formatSelect.replaceChildren(...VIDEO_FORMATS.map((format) => (
 )));
 langSelect.value = locale;
 
+function activityPaceEnabled(): boolean {
+  return Boolean((document.getElementById('activity-pace-toggle') as HTMLInputElement | null)?.checked);
+}
+
+function isEnglishLike(): boolean {
+  return locale === 'en';
+}
+
 function applyI18n(): void {
   document.querySelectorAll<HTMLElement>('[data-i18n]').forEach((node) => {
     const key = node.dataset.i18n as Parameters<typeof t>[1];
-    if (key) node.textContent = t(locale, key);
+    if (!key) return;
+    const text = t(locale, key);
+    if (key === 'brandTitle') node.innerHTML = text.replaceAll('\n', '<br />');
+    else node.textContent = text;
   });
   themeSelect.replaceChildren(...THEMES.map((theme) => (
-    new Option(locale === 'en' ? theme.labelEn : theme.labelZh, theme.id)
+    new Option(isEnglishLike() ? theme.labelEn : theme.labelZh, theme.id)
   )));
   formatSelect.replaceChildren(...VIDEO_FORMATS.map((format) => (
-    new Option(locale === 'en' ? format.labelEn : format.labelZh, format.id)
+    new Option(isEnglishLike() ? format.labelEn : format.labelZh, format.id)
   )));
+  versionLabel.textContent = `${t(locale, 'versionLabel')} ${APP_VERSION}`;
 }
 
 function localizeError(error: unknown, fallback: string): string {
   if (error instanceof TimelineParseError) {
     switch (error.reason) {
       case 'malformed-json':
-        return locale === 'en' ? 'This is not valid JSON.' : '這不是有效或完整的 JSON 檔。';
+        return isEnglishLike() ? 'This is not valid JSON.' : '這不是有效或完整的 JSON 檔。';
       case 'legacy-format':
-        return locale === 'en' ? 'Legacy Takeout format. Export from your phone instead.' : '這是較舊的 Google Takeout 格式。請改從手機匯出時間軸資料。';
+        return isEnglishLike() ? 'Legacy Takeout format. Export from your phone instead.' : '這是較舊的 Google Takeout 格式。請改從手機匯出時間軸資料。';
       case 'raw-signals-only':
-        return locale === 'en' ? 'Only raw signals found.' : '這個匯出檔只有原始定位，沒有已整理的旅程。';
+        return isEnglishLike() ? 'Only raw signals found.' : '這個匯出檔只有原始定位，沒有已整理的旅程。';
       case 'unsupported-format':
-        return locale === 'en' ? 'Unsupported Timeline JSON.' : '時間軸 JSON 必須是陣列，或包含 semanticSegments。';
+        return isEnglishLike() ? 'Unsupported Timeline JSON.' : '時間軸 JSON 必須是陣列，或包含 semanticSegments。';
       case 'no-usable-locations':
-        return locale === 'en' ? 'No usable location points.' : '這個時間軸匯出檔沒有可用的定位點。';
+        return isEnglishLike() ? 'No usable location points.' : '這個時間軸匯出檔沒有可用的定位點。';
     }
   }
   if (error instanceof Error && error.message) return error.message;
@@ -273,6 +310,8 @@ function currentRangeSignature(): string {
     `chapter:${chapterMode()}`,
     `privacy:${privacyEnabled()}`,
     `compare:${compareEnabled()}:${compareYear()}`,
+    `overlay:${overlayComparePoints.length}`,
+    `pace:${activityPaceEnabled()}`,
   ].join(';');
 }
 
@@ -384,10 +423,11 @@ async function getPreparedJourney(signal?: AbortSignal): Promise<PreparedJourney
     readMapStyle(),
     signal,
     (completed, total) => {
-      progressLabel.textContent = locale === 'en'
+      progressLabel.textContent = isEnglishLike()
         ? `Preparing map ${completed}/${total}`
         : `正在準備地圖 ${completed}/${total}`;
     },
+    activityPaceEnabled(),
   );
   prepared = nextJourney;
   selectedSignature = signature;
@@ -410,8 +450,16 @@ function parseTimelineText(text: string): Promise<unknown> {
 }
 
 function applyPoints(points: GeoPoint[], sourceName: string, append: boolean): void {
+  const capped = downsamplePoints(points, suggestMaxPoints());
+  downsampleNote = capped.removed > 0
+    ? (isEnglishLike()
+      ? ` · thinned ${capped.removed.toLocaleString()} points for memory`
+      : ` · 為節省記憶體已精簡 ${capped.removed.toLocaleString('zh-Hant-TW')} 點`)
+    : '';
+  const nextPoints = capped.points;
+  lastSourceName = sourceName;
   if (append && semanticPoints.length > 0) {
-    const merged = [...semanticPoints, ...points]
+    const merged = [...semanticPoints, ...nextPoints]
       .sort((a, b) => a.instant.getTime() - b.instant.getTime());
     const unique = new Map<string, GeoPoint>();
     for (const point of merged) {
@@ -420,7 +468,7 @@ function applyPoints(points: GeoPoint[], sourceName: string, append: boolean): v
     semanticPoints = [...unique.values()];
     mergeLabels.push(sourceName);
   } else {
-    semanticPoints = points;
+    semanticPoints = nextPoints;
     mergeLabels.length = 0;
     mergeLabels.push(sourceName);
   }
@@ -451,11 +499,13 @@ function applyPoints(points: GeoPoint[], sourceName: string, append: boolean): v
   previewCard.classList.add('hidden');
   defaultRecentRange(allPoints);
   renderMergeList();
-  fileStatus.textContent = locale === 'en'
+  fileStatus.textContent = (isEnglishLike()
     ? `${sourceName} · ${allPoints.length.toLocaleString()} points`
-    : `${sourceName} · ${allPoints.length.toLocaleString('zh-Hant-TW')} 個有效點`;
+    : `${sourceName} · ${allPoints.length.toLocaleString('zh-Hant-TW')} 個有效點`) + downsampleNote;
   emptyTimelineBanner.classList.toggle('hidden', allPoints.length >= 5);
   updateSelection();
+  pushRecent(sourceName, currentPeriodLabel());
+  refreshExtrasLabels(locale);
 }
 
 function applyTimeline(data: unknown, sourceName: string, useRawOnly = false, append = false): void {
@@ -548,13 +598,12 @@ async function decodeBgm(file: File): Promise<AudioBuffer> {
 function currentStyle() {
   const theme = themeById(themeSelect.value);
   let compareWorld: ReturnType<typeof compareWorldPoints> | undefined;
-  if (compareEnabled()) {
-    const year = compareYear();
-    if (year > 2000) {
-      const compare = comparePointsForYear(allPoints, year);
-      if (compare.length > 1) compareWorld = compareWorldPoints(compare);
-    }
-  }
+  const overlay = overlayComparePoints.length > 1
+    ? overlayComparePoints
+    : (compareEnabled() && compareYear() > 2000
+      ? comparePointsForYear(allPoints, compareYear())
+      : []);
+  if (overlay.length > 1) compareWorld = compareWorldPoints(overlay);
   return {
     route: theme.route,
     routeFade: theme.routeFade,
@@ -662,11 +711,12 @@ bgmFileInput.addEventListener('change', async () => {
 });
 
 langSelect.addEventListener('change', () => {
-  locale = langSelect.value === 'en' ? 'en' : 'zh';
+  locale = parseLocale(langSelect.value);
   localStorage.setItem('tv-locale', locale);
-  monthFormatter = new Intl.DateTimeFormat(locale === 'en' ? 'en' : 'zh-Hant-TW', { year: 'numeric', month: 'long' });
-  dateFormatter = new Intl.DateTimeFormat(locale === 'en' ? 'en' : 'zh-Hant-TW', { dateStyle: 'medium' });
+  monthFormatter = new Intl.DateTimeFormat(intlLocale(locale), { year: 'numeric', month: 'long' });
+  dateFormatter = new Intl.DateTimeFormat(intlLocale(locale), { dateStyle: 'medium' });
   applyI18n();
+  refreshExtrasLabels(locale);
   if (allPoints.length > 0) {
     months = localizeMonths(availableMonths(allPoints));
     const start = startSelect.value;
@@ -717,14 +767,14 @@ previewButton.addEventListener('click', async () => {
       const fraction = elapsedSeconds / previewDuration;
       const frame = frameAtElapsedSeconds(elapsedSeconds, previewJourneyDuration, outroHold);
       const placeLabel = placeLabelsToggle.checked
-        ? placeLabelAtProgress(journey.points, journey.cumulativeDistanceKm, frame.journeyProgress, locale)
+        ? placeLabelAtProgress(journey.points, journey.cumulativeDistanceKm, frame.journeyProgress, uiLocale(locale))
         : null;
       const chapterLabel = chapterLabelFor(
         chapterMode(),
         journey.points,
         journey.cumulativeDistanceKm,
         frame.journeyProgress,
-        locale,
+        uiLocale(locale),
       );
       drawFrame(canvas, journey, frame, titleInput.value.trim(), currentPeriodLabel(), {
         ...currentStyle(),
@@ -768,39 +818,60 @@ async function runExportOnce(): Promise<void> {
   cancelButton.classList.remove('hidden');
   cancelButton.disabled = false;
   progress.value = 0;
+  stickyProgressBar.value = 0;
   etaLabel.textContent = '';
   isExporting = true;
+  document.body.classList.add('is-exporting');
+  stickyProgress.classList.remove('hidden');
   window.addEventListener('beforeunload', beforeUnloadGuard);
   refreshActionAvailability();
   exportController = new AbortController();
   const wakeLock = await requestWakeLock();
   const startedAt = performance.now();
+  const updateProgress = (fraction: number, label: string): void => {
+    progress.value = fraction;
+    progressLabel.textContent = label;
+    stickyProgressBar.value = fraction;
+    stickyProgressLabel.textContent = label;
+    if (fraction > 0.05) {
+      const elapsed = (performance.now() - startedAt) / 1000;
+      const remaining = elapsed / fraction - elapsed;
+      etaLabel.textContent = formatEta(remaining, uiLocale(locale));
+    }
+  };
   try {
-    const journey = await getPreparedJourney(exportController.signal);
-    progressLabel.textContent = locale === 'en' ? 'Creating MP4' : '正在產出 MP4';
-    const blob = await createJourneyMp4(canvas, journey, {
-      durationSeconds: Number(durationSelect.value),
-      title: titleInput.value.trim() || (locale === 'en' ? 'My Journey' : '我的旅程'),
-      periodLabel: currentPeriodLabel(),
-      style: currentStyle(),
-      outroHoldSeconds: Number(outroHoldInput.value) || 2.5,
-      showPlaceLabels: placeLabelsToggle.checked,
-      chapterMode: chapterMode(),
-      locale,
-      audioBuffer,
-      signal: exportController.signal,
-      onProgress: (fraction) => {
-        progress.value = fraction;
-        progressLabel.textContent = locale === 'en'
-          ? `Creating MP4 ${Math.round(fraction * 100)}%`
-          : `正在產出 MP4 ${Math.round(fraction * 100)}%`;
-        if (fraction > 0.05) {
-          const elapsed = (performance.now() - startedAt) / 1000;
-          const remaining = elapsed / fraction - elapsed;
-          etaLabel.textContent = formatEta(remaining, locale);
-        }
-      },
-    });
+    const blob = await withRetry(async (attempt) => {
+      if (attempt > 0) {
+        prepared = null;
+        selectedSignature = '';
+        progressLabel.textContent = isEnglishLike()
+          ? `Retrying encode (${attempt + 1})…`
+          : `正在重試產出（第 ${attempt + 1} 次）…`;
+      }
+      const journey = await getPreparedJourney(exportController!.signal);
+      progressLabel.textContent = isEnglishLike() ? 'Creating MP4' : '正在產出 MP4';
+      return createJourneyMp4(canvas, journey, {
+        durationSeconds: Number(durationSelect.value),
+        title: titleInput.value.trim() || (isEnglishLike() ? 'My Journey' : '我的旅程'),
+        periodLabel: currentPeriodLabel(),
+        style: currentStyle(),
+        outroHoldSeconds: Number(outroHoldInput.value) || 2.5,
+        showPlaceLabels: placeLabelsToggle.checked,
+        chapterMode: chapterMode(),
+        locale: uiLocale(locale),
+        audioBuffer,
+        signal: exportController!.signal,
+        onProgress: (fraction) => {
+          updateProgress(
+            fraction,
+            isEnglishLike()
+              ? `Creating MP4 ${Math.round(fraction * 100)}%`
+              : `正在產出 MP4 ${Math.round(fraction * 100)}%`,
+          );
+        },
+      });
+    }, { retries: 2, delayMs: 500 });
+    const journey = prepared;
     if (resultUrl) URL.revokeObjectURL(resultUrl);
     resultUrl = URL.createObjectURL(blob);
     resultFile = new File([blob], 'timeline-journey.mp4', { type: 'video/mp4' });
@@ -808,13 +879,14 @@ async function runExportOnce(): Promise<void> {
     resultVideo.src = resultUrl;
     resultVideo.classList.remove('hidden');
     resultActions.classList.remove('hidden');
-    progressLabel.textContent = locale === 'en'
+    progressLabel.textContent = isEnglishLike()
       ? `Video ready · ${(blob.size / 1_000_000).toFixed(1)} MB`
       : `影片已就緒 · ${(blob.size / 1_000_000).toFixed(1)} MB`;
+    stickyProgressLabel.textContent = progressLabel.textContent;
     etaLabel.textContent = '';
-    const distance = Math.round(selectedDistanceKm(journey.points));
+    const distance = Math.round(selectedDistanceKm(journey?.points ?? currentPoints()));
     shareCard.classList.remove('hidden');
-    shareCardTitle.textContent = titleInput.value.trim() || (locale === 'en' ? 'My Journey' : '我的旅程');
+    shareCardTitle.textContent = titleInput.value.trim() || (isEnglishLike() ? 'My Journey' : '我的旅程');
     shareCardMeta.textContent = `${currentPeriodLabel()} · ${distance} km`;
     shareCardCanvas.width = 480;
     shareCardCanvas.height = 480;
@@ -840,19 +912,30 @@ async function runExportOnce(): Promise<void> {
     const shareData = { files: [resultFile] };
     shareButton.hidden = !(typeof navigator.share === 'function'
       && (typeof navigator.canShare !== 'function' || navigator.canShare(shareData)));
+    recordEncodePerf({
+      durationSec: Number(durationSelect.value),
+      encodeMs: performance.now() - startedAt,
+      points: journey?.points.length ?? currentPoints().length,
+      width: canvas.width,
+      height: canvas.height,
+    });
+    refreshExtrasLabels(locale);
+    pushRecent(lastSourceName || 'timeline', currentPeriodLabel());
   } catch (error) {
     if (exportController.signal.aborted || (error instanceof DOMException && error.name === 'AbortError')) {
-      progressLabel.textContent = locale === 'en' ? 'Cancelled' : '已取消產出影片';
+      progressLabel.textContent = isEnglishLike() ? 'Cancelled' : '已取消產出影片';
       progress.value = 0;
       etaLabel.textContent = '';
     } else {
-      showClassifiedError(error, locale, setError, errorHint);
-      progressLabel.textContent = locale === 'en' ? 'Could not create video' : '無法產出影片';
+      showClassifiedError(error, uiLocale(locale), setError, errorHint);
+      progressLabel.textContent = isEnglishLike() ? 'Could not create video' : '無法產出影片';
     }
   } finally {
     await wakeLock?.release().catch(() => undefined);
     exportController = null;
     isExporting = false;
+    document.body.classList.remove('is-exporting');
+    stickyProgress.classList.add('hidden');
     window.removeEventListener('beforeunload', beforeUnloadGuard);
     cancelButton.classList.add('hidden');
     refreshActionAvailability();
@@ -900,6 +983,77 @@ downloadPosterButton.addEventListener('click', () => {
   anchor.click();
 });
 
+downloadHeatmapButton.addEventListener('click', () => {
+  const points = currentPoints();
+  if (points.length < 2) return;
+  const heat = document.createElement('canvas');
+  heat.width = 1080;
+  heat.height = 1080;
+  drawHeatmapPoster(
+    heat,
+    points,
+    titleInput.value.trim() || (isEnglishLike() ? 'My Journey' : '我的旅程'),
+    `${currentPeriodLabel()} · ${Math.round(selectedDistanceKm(points))} km`,
+  );
+  heat.toBlob((blob) => {
+    if (!blob) return;
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = 'timeline-heatmap.png';
+    anchor.click();
+    URL.revokeObjectURL(url);
+  }, 'image/png');
+});
+
+downloadSrtButton.addEventListener('click', () => {
+  const points = prepared?.points ?? currentPoints();
+  const distances = prepared?.cumulativeDistanceKm ?? cumulativeDistances(points);
+  const mode = chapterMode() === 'off' ? 'day' : chapterMode();
+  const srt = buildJourneySrt(
+    mode,
+    points,
+    distances,
+    Number(durationSelect.value),
+    uiLocale(locale),
+  );
+  if (!srt) return;
+  downloadText('timeline-chapters.srt', srt, 'application/x-subrip');
+});
+
+compareFileInput.addEventListener('change', async () => {
+  const file = compareFileInput.files?.[0];
+  if (!file) return;
+  try {
+    const kind = detectImportKind(file);
+    const text = await file.text();
+    let points: GeoPoint[] = [];
+    if (kind === 'gpx') points = parseGpx(text);
+    else if (kind === 'kml') points = parseKml(text);
+    else points = parseTimelineJson(await parseTimelineText(text));
+    overlayComparePoints = downsamplePoints(points, suggestMaxPoints()).points;
+    fileStatus.textContent = isEnglishLike()
+      ? `Compare file loaded · ${overlayComparePoints.length} points`
+      : `已載入對照檔 · ${overlayComparePoints.length.toLocaleString('zh-Hant-TW')} 點`;
+    updateSelection();
+  } catch (error) {
+    setSettingsError(localizeError(error, isEnglishLike() ? 'Could not read compare file.' : '無法讀取對照檔。'));
+  } finally {
+    compareFileInput.value = '';
+  }
+});
+
+function anotherRound(): void {
+  resultActions.classList.add('hidden');
+  resultVideo.classList.add('hidden');
+  shareCard.classList.add('hidden');
+  setError(null);
+  progress.classList.add('hidden');
+  progressLabel.textContent = isEnglishLike() ? 'Ready for another round' : '可再開一輪';
+  settingsCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  startDateInput.focus();
+}
+
 void canCreateMp4(480, 480).then((supported) => {
   compatibilityChecked = true;
   encodingSupported = supported;
@@ -920,8 +1074,8 @@ async function startHeroDemo(): Promise<void> {
         heroDemoCanvas,
         journey,
         frame,
-        locale === 'en' ? 'Sample Journey' : '範例旅程',
-        locale === 'en' ? 'Demo' : '示範',
+        isEnglishLike() ? 'Sample Journey' : '範例旅程',
+        isEnglishLike() ? 'Demo' : '示範',
         currentStyle(),
       );
       heroAnimation = requestAnimationFrame(loop);
@@ -933,17 +1087,46 @@ async function startHeroDemo(): Promise<void> {
   }
 }
 
+function startTutorialPlayer(): void {
+  const dialog = document.getElementById('tutorial-dialog') as HTMLDialogElement | null;
+  const slides = [...document.querySelectorAll<HTMLElement>('.tutorial-slide')];
+  const bar = document.querySelector<HTMLElement>('.tutorial-progress span');
+  const replay = document.getElementById('tutorial-replay');
+  let timer = 0;
+  let step = 0;
+  const play = (): void => {
+    window.clearInterval(timer);
+    step = 0;
+    const tick = (): void => {
+      slides.forEach((slide, index) => slide.classList.toggle('is-active', index === step));
+      if (bar) {
+        bar.style.width = `${100 / slides.length}%`;
+        bar.style.marginLeft = `${(100 / slides.length) * step}%`;
+      }
+      step = (step + 1) % slides.length;
+    };
+    tick();
+    timer = window.setInterval(tick, 2800);
+  };
+  dialog?.addEventListener('close', () => window.clearInterval(timer));
+  document.getElementById('tutorial-open-button')?.addEventListener('click', () => {
+    play();
+  });
+  replay?.addEventListener('click', play);
+}
+
 const visits = Number(localStorage.getItem('tv-visits') ?? '0') + 1;
 localStorage.setItem('tv-visits', String(visits));
-visitCount.textContent = locale === 'en'
+visitCount.textContent = isEnglishLike()
   ? `Local visits on this device: ${visits}`
   : `此裝置本機造訪次數：${visits}`;
 
 applyI18n();
 void startHeroDemo();
+startTutorialPlayer();
 
 wireAdvancedControls({
-  locale: () => locale,
+  locale: () => uiLocale(locale),
   allPoints: () => allPoints,
   setPointsSelection: () => undefined,
   currentPoints,
@@ -953,18 +1136,39 @@ wireAdvancedControls({
   runExportOnce,
   setError,
   setSettingsError,
-  getTitle: () => titleInput.value.trim() || (locale === 'en' ? 'My Journey' : '我的旅程'),
+  getTitle: () => titleInput.value.trim() || (isEnglishLike() ? 'My Journey' : '我的旅程'),
   getPeriodLabel: currentPeriodLabel,
   canvas,
 });
 
-['map-style-select', 'marker-style-select', 'chapter-select', 'preview-speed-select', 'privacy-blur-toggle', 'compare-toggle', 'compare-year-input']
+wireExtras({
+  locale: () => locale,
+  preview: () => {
+    if (!previewButton.disabled) previewButton.click();
+  },
+  create: () => {
+    if (!createButton.disabled) createButton.click();
+  },
+  updateSelection,
+  anotherRound,
+});
+
+['map-style-select', 'marker-style-select', 'chapter-select', 'preview-speed-select', 'privacy-blur-toggle', 'compare-toggle', 'compare-year-input', 'activity-pace-toggle']
   .forEach((id) => {
     document.getElementById(id)?.addEventListener('change', updateSelection);
   });
 
 if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    void navigator.serviceWorker.register(`${import.meta.env.BASE_URL}service-worker.js`);
+  navigator.serviceWorker.addEventListener('message', async (event) => {
+    if (event.data?.type !== 'SHARE_TARGET_FILE') return;
+    try {
+      const file = new File([event.data.buffer], event.data.name || 'Timeline.json', {
+        type: event.data.mime || 'application/json',
+      });
+      await loadFile(file, false);
+    } catch (error) {
+      setError(localizeError(error, isEnglishLike() ? 'Could not open shared file.' : '無法開啟分享進來的檔案。'));
+      previewCard.classList.remove('hidden');
+    }
   });
 }

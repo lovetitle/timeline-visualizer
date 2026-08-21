@@ -4,6 +4,7 @@ export interface GeoPoint {
   longitude: number;
   recordedDate?: string;
   timeZoneMissing?: boolean;
+  activityType?: string;
 }
 
 export interface MonthOption {

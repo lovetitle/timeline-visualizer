@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>隱私報告 · 時間軸視覺化</title>
+    <link rel="icon" href="./icon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body>
+    <div class="page">
+      <header class="hero">
+        <p class="eyebrow"><a href="./">← 回到工具</a></p>
+        <h1>隱私報告</h1>
+        <p class="lede">時間軸 JSON 不會上傳。此頁只顯示本機記錄的地圖圖磚請求摘要，可隨時清除。</p>
+      </header>
+      <section class="panel">
+        <h2>本機圖磚請求</h2>
+        <p id="privacy-summary" class="status">讀取中…</p>
+        <div class="actions">
+          <button id="privacy-clear-button" class="secondary" type="button">清除本機記錄</button>
+          <a class="button" href="./">開始使用</a>
+        </div>
+        <h2>原則</h2>
+        <ul class="faq-list">
+          <li>Timeline / GPX / KML 只在瀏覽器記憶體與本機處理。</li>
+          <li>CARTO 會收到選取旅程範圍的圖磚座標與一般網路資訊（如 IP）。</li>
+          <li>造訪次數、設定、效能統計僅存 localStorage。</li>
+          <li>可關閉「載入地圖」同意，就不會請求圖磚。</li>
+        </ul>
+      </section>
+    </div>
+    <script type="module">
+      import { clearTileLog, summarizeTileLog } from '/src/privacyReport.ts';
+      const summary = document.getElementById('privacy-summary');
+      const clearBtn = document.getElementById('privacy-clear-button');
+      const locale = localStorage.getItem('tv-locale') || 'zh';
+      if (summary) summary.textContent = summarizeTileLog(locale);
+      clearBtn?.addEventListener('click', () => {
+        clearTileLog();
+        if (summary) summary.textContent = summarizeTileLog(locale);
+      });
+    </script>
+  </body>
+</html>

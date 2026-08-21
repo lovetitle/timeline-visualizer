@@ -1,20 +1,23 @@
 {
   "name": "timeline-visualizer-web",
   "private": true,
-  "version": "1.1.0",
+  "version": "1.2.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "mediabunny": "1.55.1"
   },
   "devDependencies": {
+    "@playwright/test": "1.54.2",
     "typescript": "5.9.2",
     "vite": "7.1.5",
     "vitest": "3.2.4"
   }
 }
+
