@@ -9,11 +9,12 @@
     <link rel="icon" href="./icon.svg" type="image/svg+xml" />
     <title>時間軸視覺化</title>
   </head>
-  <body>
+  <body class="ui-simple">
     <a class="skip-link" href="#file-heading" data-i18n="skipLink">跳到主要內容</a>
     <div class="page">
       <header class="hero">
         <div class="hero-top">
+          <button id="ui-mode-toggle" class="ghost icon-button" type="button" data-i18n="simpleMode" aria-pressed="false">簡單模式</button>
           <button id="theme-mode-toggle" class="ghost icon-button" type="button" data-i18n="darkMode" title="深色模式">深色模式</button>
           <label class="lang-label" for="lang-select" data-i18n="lang">語言</label>
           <select id="lang-select" aria-label="語言">
@@ -30,20 +31,31 @@
         <div class="hero-body">
           <div class="hero-copy">
             <p class="brand-mark">Timeline Visualizer</p>
+            <p class="trust-badges" role="note">
+              <span class="trust-badge" data-i18n="trustLocal">不上傳時間軸</span>
+              <span class="trust-badge" data-i18n="trustTiles">僅圖磚請求</span>
+              <span class="trust-badge" data-i18n="trustNoAccount">免帳號</span>
+            </p>
             <p class="eyebrow" data-i18n="brandEyebrow">本機處理 · 不上傳時間軸</p>
             <h1 data-i18n="brandTitle">把 Google 時間軸<br />做成旅行影片</h1>
             <p class="lede" data-i18n="brandLede">選擇匯出的 Timeline.json、GPX 或 KML，預覽移動路徑，再在瀏覽器裡產出 MP4。時間軸資料不會離開這台裝置，只有地圖圖磚會向 CARTO 請求。</p>
-            <p class="hero-links">
+            <p class="hero-actions">
               <button id="tutorial-open-button" class="ghost inline-ghost" type="button" data-i18n="watchTutorial">觀看 45 秒教學</button>
-              <a href="./updates.html" data-i18n="updatesLink">更新公告</a>
-              <a href="./faq.html" data-i18n="faqLink">常見問題</a>
-              <a href="./privacy.html" data-i18n="privacyLink">隱私報告</a>
-              <a href="./stats.html" data-i18n="statsLink">旅程統計</a>
-              <a href="./quality.html" data-i18n="qualityLink">品質儀表板</a>
-              <a href="./wrapped.html" data-i18n="wrappedLink">年度回顧</a>
-              <a href="./terms.html" data-i18n="termsLink">使用條款</a>
+              <button id="pwa-install-button" class="ghost inline-ghost hidden" type="button" data-i18n="installApp">安裝到主畫面</button>
             </p>
-            <p class="shortcut-hint muted" data-i18n="shortcutHint">快捷鍵：空白鍵預覽 · Enter 產出</p>
+            <details class="hero-more" data-ui="pro-collapsible">
+              <summary data-i18n="moreLinks">更多連結</summary>
+              <p class="hero-links">
+                <a href="./updates.html" data-i18n="updatesLink">更新公告</a>
+                <a href="./faq.html" data-i18n="faqLink">常見問題</a>
+                <a href="./privacy.html" data-i18n="privacyLink">隱私報告</a>
+                <a href="./stats.html" data-i18n="statsLink">旅程統計</a>
+                <a href="./quality.html" data-i18n="qualityLink">品質儀表板</a>
+                <a href="./wrapped.html" data-i18n="wrappedLink">年度回顧</a>
+                <a href="./terms.html" data-i18n="termsLink">使用條款</a>
+              </p>
+            </details>
+            <p class="shortcut-hint muted" data-ui="pro" data-i18n="shortcutHint">快捷鍵：空白鍵預覽 · Enter 產出</p>
           </div>
           <div class="hero-media">
           <canvas id="hero-demo-canvas" width="360" height="360" aria-label="範例旅程動畫"></canvas>
@@ -62,9 +74,13 @@
               <input id="timeline-file" type="file" accept=".json,.gpx,.kml,application/json" />
             </label>
             <p class="drop-hint" data-i18n="dropHint">或把檔案拖放到這裡</p>
-            <button id="sample-button" class="ghost" type="button" data-i18n="sampleButton">先試虛構範例旅程</button>
-            <button id="add-file-button" class="ghost" type="button" data-i18n="addFile">再加入另一段旅程</button>
-            <label class="ghost file-ghost">
+            <div class="quick-strip" role="group" aria-label="quick">
+              <button id="sample-button" class="ghost" type="button" data-i18n="sampleButton">先試虛構範例旅程</button>
+              <button id="preset-reels" class="ghost" type="button" data-i18n="presetReels">短影音預設</button>
+              <button id="highlight-30-button" class="ghost" type="button" data-i18n="highlight30">精華 30 秒</button>
+            </div>
+            <button id="add-file-button" class="ghost" type="button" data-ui="pro" data-i18n="addFile">再加入另一段旅程</button>
+            <label class="ghost file-ghost" data-ui="pro">
               <span data-i18n="compareFile">載入對照檔（第二份時間軸）</span>
               <input id="compare-file" type="file" accept=".json,.gpx,.kml,application/json" />
             </label>
@@ -79,8 +95,10 @@
             <ol id="empty-steps" class="restore-steps"></ol>
           </div>
 
-          <div class="export-guide">
-            <h3 data-i18n="exportGuideTitle">還沒有檔案？從手機匯出</h3>
+          <details id="export-guide-details" class="export-guide guide-cards">
+            <summary>
+              <h3 data-i18n="exportGuideTitle">還沒有檔案？從手機匯出</h3>
+            </summary>
             <p id="guide-intro-text" class="guide-intro"></p>
             <div class="platform-switch">
               <input type="radio" name="export-platform" id="guide-android" checked />
@@ -148,29 +166,30 @@
                 <figcaption id="frame-cap-3"></figcaption>
               </figure>
             </div>
-          </div>
+          </details>
         </section>
 
         <section id="settings-card" class="panel hidden" aria-labelledby="settings-heading">
           <h2 id="settings-heading" data-i18n="settingsHeading">建立旅程</h2>
+          <p class="quick-create-hint status muted" data-i18n="quickCreateHint">簡單模式：選期間 → 預覽 → 產出。預設直式社群成片；更多選項在下方或切換 Pro。</p>
           <div class="settings-accordion">
-          <details class="settings-section" open>
+          <details class="settings-section" open id="section-period-details">
             <summary data-i18n="sectionPeriod">期間與模板</summary>
             <div class="settings-section-body">
 
-          <label id="raw-signals-row" class="checkbox-row hidden">
+          <label id="raw-signals-row" class="checkbox-row hidden" data-ui="pro">
             <input id="raw-signals-toggle" type="checkbox" />
             <span data-i18n="rawSignals">改用原始定位資料</span>
           </label>
           <p id="raw-signals-description" class="status hidden" data-i18n="rawSignalsHelp">使用未經處理的定位估計。已降低雜訊，但路線與距離仍可能不準。</p>
-          <label id="raw-accuracy-field" class="hidden">
+          <label id="raw-accuracy-field" class="hidden" data-ui="pro">
             <span data-i18n="rawAccuracy">準確度上限（公尺）</span>
             <input id="raw-accuracy-limit" type="number" min="0" step="1" inputmode="decimal" value="100" />
             <span class="field-help" data-i18n="rawAccuracyHelp">低於此準確度的點會被排除。留空則保留所有可用定位。</span>
           </label>
 
           <div id="period-controls">
-            <label class="date-scrubbers">
+            <label class="date-scrubbers" data-ui="pro">
             <span data-i18n="dateScrubber">日期區間滑桿</span>
             <input id="range-scrub-start" type="range" min="0" max="1000" value="0" aria-label="開始" />
             <input id="range-scrub-end" type="range" min="0" max="1000" value="1000" aria-label="結束" />
@@ -207,22 +226,21 @@
             <li id="step-preview" data-i18n="stepPreview">3 預覽</li>
             <li id="step-create" data-i18n="stepCreate">4 產出</li>
           </ol>
-          <button id="onboarding-next" class="ghost" type="button" data-i18n="onboardingNext">下一步引導</button>
-<div class="preset-actions" role="group" aria-label="快速預設">
-            <button id="preset-reels" class="ghost" type="button" data-i18n="presetReels">短影音預設</button>
+          <button id="onboarding-next" class="ghost" type="button" data-ui="pro" data-i18n="onboardingNext">下一步引導</button>
+          <div class="preset-actions" role="group" aria-label="快速預設" data-ui="pro">
             <button id="preset-island" class="ghost" type="button" data-i18n="presetIsland">環島預設</button>
             <button id="preset-business" class="ghost" type="button" data-i18n="presetBusiness">出差預設</button>
           </div>
           <div class="smart-actions" role="group" aria-label="智慧選取">
             <button id="smart-this-year" class="ghost" type="button" data-i18n="smartThisYear">今年行程</button>
             <button id="smart-recent" class="ghost" type="button" data-i18n="smartRecent">最近旅程</button>
-            <button id="smart-abroad" class="ghost" type="button" data-i18n="smartAbroad">海外行程</button>
-            <button id="smart-trim" class="ghost" type="button" data-i18n="smartTrim">裁切雜訊</button>
+            <button id="smart-abroad" class="ghost" type="button" data-ui="pro" data-i18n="smartAbroad">海外行程</button>
+            <button id="smart-trim" class="ghost" type="button" data-ui="pro" data-i18n="smartTrim">裁切雜訊</button>
           </div>
 
-          <ul id="merge-list" class="merge-list" aria-label="已合併的旅程區間"></ul>
+          <ul id="merge-list" class="merge-list" aria-label="已合併的旅程區間" data-ui="pro"></ul>
 
-          <label>
+          <label data-ui="pro">
             <span data-i18n="videoTemplate">影片模板</span>
             <select id="template-select">
               <option value="">（手動設定）</option>
@@ -232,25 +250,23 @@
               <option value="city">城市漫步</option>
             </select>
           </label>
-          <button id="suggest-duration-button" class="ghost" type="button" data-i18n="suggestDuration">依距離建議片長</button>
+          <button id="suggest-duration-button" class="ghost" type="button" data-ui="pro" data-i18n="suggestDuration">依距離建議片長</button>
             </div>
           </details>
-          <details class="settings-section" open>
-            <summary data-i18n="sectionStyle">外觀與節奏</summary>
-            <div class="settings-section-body">
+
+          <div class="simple-core-panel">
           <label>
             <span data-i18n="videoTitle">影片標題</span>
             <input id="video-title" type="text" maxlength="80" value="我的旅程" />
           </label>
-
-          <div class="field-grid">
+          <div class="field-grid simple-core">
             <label>
               <span data-i18n="duration">片長</span>
               <select id="duration">
-                <option value="10" selected>10 秒</option>
+                <option value="10">10 秒</option>
                 <option value="15">15 秒</option>
                 <option value="20">20 秒</option>
-                <option value="30">30 秒</option>
+                <option value="30" selected>30 秒</option>
                 <option value="45">45 秒</option>
                 <option value="60">60 秒</option>
                 <option value="90">90 秒</option>
@@ -263,12 +279,16 @@
               <span data-i18n="camera">鏡頭移動</span>
               <select id="camera-movement">
                 <option value="fixed">固定縮放</option>
-                <option value="steady" selected>穩定跟隨</option>
-                <option value="dynamic">動態跟隨</option>
+                <option value="steady">穩定跟隨</option>
+                <option value="dynamic" selected>動態跟隨</option>
               </select>
             </label>
           </div>
+          </div>
 
+          <details class="settings-section" id="section-style-details">
+            <summary data-i18n="sectionStyle">外觀與節奏</summary>
+            <div class="settings-section-body">
           <div class="field-grid">
             <label>
               <span data-i18n="compression">長途壓縮</span>
@@ -301,10 +321,10 @@
             <label>
               <span data-i18n="resolution">解析度</span>
               <select id="format-select">
-                <option value="sq480" selected>正方形 480p</option>
+                <option value="sq480">正方形 480p</option>
                 <option value="sq720">正方形 720p</option>
                 <option value="sq1080">正方形 1080p</option>
-                <option value="portrait">直式 1080×1920</option>
+                <option value="portrait" selected>直式 1080×1920</option>
                 <option value="landscape">橫式 1920×1080</option>
               </select>
             </label>
@@ -336,9 +356,9 @@
             <label>
               <span data-i18n="chapterMode">章節分段</span>
               <select id="chapter-select">
-                <option value="off" selected>關閉</option>
+                <option value="off">關閉</option>
                 <option value="day">依日</option>
-                <option value="city">依城市</option>
+                <option value="city" selected>依城市</option>
               </select>
             </label>
             <label>
@@ -391,7 +411,7 @@
 
           </div>
           </details>
-          <details class="settings-section">
+          <details class="settings-section" id="section-advanced-details" data-ui="pro">
             <summary data-i18n="sectionAdvanced">進階與批次</summary>
             <div class="settings-section-body">
           <div class="settings-io">
@@ -422,7 +442,7 @@
 
           </div>
           </details>
-          <details class="settings-section" open>
+          <details class="settings-section" open id="section-export-details">
             <summary data-i18n="sectionExport">產出與匯出</summary>
             <div class="settings-section-body">
           <ul id="export-checklist" class="export-checklist" aria-label="產出檢查清單"></ul>
@@ -466,9 +486,8 @@
             <span data-i18n="scrubberLabel">預覽進度</span>
             <input id="preview-scrubber" type="range" min="0" max="1000" value="0" />
           </label>
-          <div class="v16-tools">
+          <div class="v16-tools" id="section-tools-details" data-ui="pro">
           <div class="actions">
-            <button id="highlight-30-button" class="secondary" type="button" data-i18n="highlight30">精華 30 秒</button>
             <button id="health-check-button" class="ghost" type="button" data-i18n="healthCheck">健康檢查</button>
             <button id="refresh-calendar-button" class="ghost" type="button" data-i18n="calendarHotspots">日曆熱點</button>
           </div>
@@ -485,9 +504,9 @@
           <label>
             <span data-i18n="colorGrade">日光色調</span>
             <select id="color-grade-select">
-              <option value="off" selected>關閉</option>
+              <option value="off">關閉</option>
               <option value="auto">自動</option>
-              <option value="warm">暖色</option>
+              <option value="warm" selected>暖色</option>
               <option value="cool">冷色</option>
               <option value="night">夜景</option>
             </select>
@@ -511,7 +530,7 @@
           <p id="wrapped-panel" class="status muted"></p>
           <button id="wrapped-refresh-button" class="ghost" type="button" data-i18n="wrappedSummary">年度回顧摘要</button>
         </div>
-<div class="v15-tools">
+<div class="v15-tools" data-ui="pro">
           <div class="section-heading"><h3 data-i18n="smartClips">智慧剪輯建議</h3>
             <button id="refresh-clips-button" class="ghost" type="button" data-i18n="refreshClips">重新分析</button>
           </div>
@@ -538,6 +557,10 @@
           <div id="result-actions" class="actions hidden">
             <button id="share-button" type="button" data-i18n="share">分享影片</button>
             <a id="download-link" class="button secondary" download="timeline-journey.mp4" data-i18n="download">下載 MP4</a>
+            <button id="another-round-button" class="secondary" type="button" data-i18n="anotherRound">再開一輪（保留設定）</button>
+            <button id="retry-720-button" class="ghost" type="button" data-i18n="retry720">失敗改 720p</button>
+            <button id="retry-480-button" class="ghost" type="button" data-i18n="retry480">失敗改 480p</button>
+            <div class="result-pack" data-ui="pro" id="section-pack-details">
             <button id="copy-link-button" class="secondary" type="button" data-i18n="copyLink">複製網站連結</button>
             <button id="download-poster-button" class="secondary" type="button" data-i18n="downloadPoster">下載預覽圖</button>
             <button id="download-heatmap-button" class="secondary" type="button" data-i18n="heatmapPoster">下載熱力圖海報</button>
@@ -548,15 +571,13 @@
               <input id="import-tiles-input" type="file" accept="application/json,.json" />
             </label>
             <button id="download-srt-button" class="secondary" type="button" data-i18n="downloadSrt">下載章節 SRT</button>
-            <button id="another-round-button" class="secondary" type="button" data-i18n="anotherRound">再開一輪（保留設定）</button>
             <button id="download-report-button" class="secondary" type="button" data-i18n="downloadReport">下載旅程報告</button>
             <button id="pack-export-button" class="secondary" type="button" data-i18n="packExport">打包腳本＋SRT</button>
             <button id="storyboard-zip-button" class="secondary" type="button" data-i18n="storyboardZip">故事板 ZIP</button>
             <button id="draw-share-qr-button" class="secondary" type="button" data-i18n="shareQr">分享卡 QR</button>
             <canvas id="share-qr-canvas" class="hidden" width="160" height="160"></canvas>
-            <button id="retry-720-button" class="ghost" type="button" data-i18n="retry720">失敗改 720p</button>
-            <button id="retry-480-button" class="ghost" type="button" data-i18n="retry480">失敗改 480p</button>
-<button id="local-share-button" class="secondary" type="button" data-i18n="localShare">本機分享連結</button>
+            <button id="local-share-button" class="secondary" type="button" data-i18n="localShare">本機分享連結</button>
+            </div>
           </div>
           <div id="share-card" class="share-card hidden">
             <h3 id="share-card-title" data-i18n="shareCardTitle">分享卡片</h3>
@@ -566,7 +587,7 @@
         </section>
       </div>
 
-      <details id="brand-panel" class="panel brand-panel">
+      <details id="brand-panel" class="panel brand-panel" data-ui="pro">
         <summary data-i18n="brandSettings">品牌設定（本機）</summary>
         <label><span data-i18n="brandSiteName">站名</span><input id="brand-site-name" type="text" maxlength="60" /></label>
         <label><span data-i18n="brandTagline">自訂主標（選填，覆蓋預設標題）</span><input id="brand-tagline" type="text" maxlength="80" /></label>
@@ -594,6 +615,8 @@
           <a id="report-issue" href="mailto:timeline-visualizer@example.com?subject=%E6%99%82%E9%96%93%E8%BB%B8%E8%A6%96%E8%A6%BA%E5%8C%96%20%E5%95%8F%E9%A1%8C%E5%9B%9E%E5%A0%B1" data-i18n="reportIssue">回報問題</a>
         </p>
         <p id="pwa-hint" data-i18n="installPwa">加到主畫面提示：用瀏覽器選單「安裝應用程式」或「加入主畫面」。</p>
+        <button id="pwa-install-footer" class="ghost" type="button" data-i18n="installApp">安裝到主畫面</button>
+        <p id="downsample-hint" class="muted"></p>
         <p id="visit-count" class="muted"></p>
         <p id="perf-label" class="muted"></p>
         <p id="anon-stats-label" class="muted"></p>

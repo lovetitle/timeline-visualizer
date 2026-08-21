@@ -28,6 +28,7 @@ import { drawHeatmapPoster } from './heatmap';
 import { t, type Locale } from './i18n';
 import { detectImportKind, parseGpx, parseKml } from './importFormats';
 import { intlLocale, L, uiLocale } from './localeUtil';
+import { applyDefaultFilmRecipeIfFresh, loadUiMode, wireUiMode } from './uiMode';
 import { filterLocationOutliers, type LocationFilterMode } from './outlier';
 import { recordEncodePerf } from './perf';
 import { placeLabelAtProgress } from './places';
@@ -234,6 +235,9 @@ function applyI18n(): void {
   if (themeToggle) themeToggle.setAttribute('title', t(locale, 'darkMode'));
   if (!pauseGate.paused) pauseButton.textContent = t(locale, 'pauseEncode');
   applyBrandToDom(loadBrand());
+  const mode = loadUiMode();
+  const modeToggle = document.getElementById('ui-mode-toggle');
+  if (modeToggle) modeToggle.textContent = t(locale, mode === 'pro' ? 'proMode' : 'simpleMode');
 }
 
 function localizeError(error: unknown, fallback: string): string {
@@ -550,6 +554,10 @@ function applyPoints(points: GeoPoint[], sourceName: string, append: boolean): v
       ` · 메모리 절약을 위해 ${capped.removed.toLocaleString(intlLocale(locale))}개 포인트 축소`,
     )
     : '';
+  const downsampleHint = document.getElementById('downsample-hint');
+  if (downsampleHint) {
+    downsampleHint.textContent = capped.removed > 0 ? t(locale, 'downsampleHint') : '';
+  }
   const nextPoints = capped.points;
   lastSourceName = sourceName;
   if (append && semanticPoints.length > 0) {
@@ -776,6 +784,7 @@ async function renderPreviewAt(progress01: number): Promise<void> {
     })(),
     gradeOverlay: gradeForProgress(journey.points, frame.journeyProgress, readColorGrade()),
     stayMarkers: stayMarkersForJourney(journey),
+    journeyPulse: frame.journeyProgress,
   });
   const scrubber = document.getElementById('preview-scrubber') as HTMLInputElement | null;
   if (scrubber) scrubber.value = String(Math.round(progress01 * 1000));
@@ -961,6 +970,7 @@ previewButton.addEventListener('click', async () => {
         })(),
         gradeOverlay: gradeForProgress(journey.points, frame.journeyProgress, readColorGrade()),
         stayMarkers: stayMarkersForJourney(journey),
+        journeyPulse: frame.journeyProgress,
       });
       progressLabel.textContent = fraction < 1
         ? (L(locale, `預覽中 ${speed}x`, `Previewing ${speed}x`, `プレビュー中 ${speed}x`, `미리보기 중 ${speed}x`))
@@ -1418,6 +1428,8 @@ visitCount.textContent = tx(
 );
 
 applyI18n();
+applyDefaultFilmRecipeIfFresh();
+wireUiMode(() => applyI18n());
 const brand = loadBrand();
 brandSiteName.value = brand.siteName;
 brandTagline.value = brand.tagline;

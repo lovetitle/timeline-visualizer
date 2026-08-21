@@ -21,7 +21,9 @@ export function frameAtElapsedSeconds(
 ): TimelineFrame {
   const journeySeconds = Math.max(1, journeyDurationSeconds);
   if (elapsedSeconds <= journeySeconds) {
-    return { journeyProgress: clamp(elapsedSeconds / journeySeconds), outroProgress: 0 };
+    const linear = clamp(elapsedSeconds / journeySeconds);
+    // Gentle ease keeps camera from feeling snappy vs bare competitors.
+    return { journeyProgress: easeInOutCubic(linear), outroProgress: 0 };
   }
   const transition = Math.max(OUTRO_TRANSITION_SECONDS, Math.min(outroHoldSeconds, OUTRO_TRANSITION_SECONDS + 2));
   return {

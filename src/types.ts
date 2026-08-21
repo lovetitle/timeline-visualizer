@@ -67,6 +67,8 @@ export interface DrawStyle {
   introProgress?: number;
   stayMarkers?: { x: number; y: number; label: string }[];
   splitCompareProgress?: number;
+  /** 0–1 pulse phase for stay-point breathing. */
+  journeyPulse?: number;
 }
 
 export interface PreparedJourney {

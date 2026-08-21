@@ -1118,3 +1118,80 @@ html.a11y-reduce-motion *::after {
   animation: none !important;
   transition: none !important;
 }
+
+/* ¡X¡X v1.7 simple / pro shell ¡X¡X */
+.trust-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 0 10px;
+}
+.trust-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: #1c2a24;
+  background: rgba(28, 42, 36, 0.08);
+  border: 1px solid rgba(28, 42, 36, 0.14);
+}
+.hero-actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0; }
+.hero-more { margin: 8px 0 0; }
+.hero-more > summary {
+  cursor: pointer;
+  color: #8a4a24;
+  font-weight: 600;
+}
+.quick-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 10px 0 4px;
+}
+.quick-create-hint { margin: 0 0 12px; }
+.simple-core-panel {
+  display: grid;
+  gap: 10px;
+  margin: 0 0 14px;
+  padding: 12px;
+  border-radius: 14px;
+  background: rgba(196, 92, 38, 0.06);
+  border: 1px solid rgba(196, 92, 38, 0.18);
+}
+.export-guide > summary {
+  list-style: none;
+  cursor: pointer;
+}
+.export-guide > summary::-webkit-details-marker { display: none; }
+.export-guide > summary h3 { margin: 0; display: inline; }
+.guide-cards .steps > li {
+  border-left: 3px solid rgba(196, 92, 38, 0.55);
+  padding-left: 10px;
+  margin: 10px 0;
+}
+body.ui-simple [data-ui="pro"] { display: none !important; }
+body.ui-simple .hero-more { display: block; }
+body.ui-simple .lede { font-size: 16px; max-width: 36em; }
+body.ui-simple .eyebrow { display: none; }
+body.ui-pro [data-ui="simple-only"] { display: none !important; }
+#ui-mode-toggle[aria-pressed="true"] {
+  background: rgba(196, 92, 38, 0.16);
+  border-color: rgba(196, 92, 38, 0.4);
+}
+.result-pack { display: contents; }
+body.ui-simple .result-pack { display: none !important; }
+@media (max-width: 800px) {
+  body.ui-simple .hero-media { max-width: 220px; margin-inline: auto; }
+  body.ui-simple .layout { gap: 14px; }
+}
+:root[data-theme="dark"] .trust-badge {
+  color: #f6f3ee;
+  background: rgba(246, 243, 238, 0.08);
+  border-color: rgba(246, 243, 238, 0.16);
+}
+:root[data-theme="dark"] .simple-core-panel {
+  background: rgba(196, 92, 38, 0.12);
+}

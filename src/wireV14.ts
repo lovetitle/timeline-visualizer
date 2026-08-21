@@ -59,6 +59,10 @@ export function wireV14(host: V14Host): void {
     setVal('theme-select', preset.theme);
     setVal('chapter-select', preset.chapter);
     setCheck('place-labels-toggle', preset.placeLabels);
+    setVal('color-grade-select', preset.id === 'reels' ? 'warm' : 'auto');
+    setCheck('burn-captions-toggle', true);
+    const intro = document.getElementById('intro-hold') as HTMLInputElement | null;
+    if (intro && preset.id === 'reels') intro.value = '1.5';
     const title = document.getElementById('video-title') as HTMLInputElement | null;
     if (title) {
       title.value = host.locale() === 'en'

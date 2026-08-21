@@ -1,17 +1,19 @@
 {
-  "name": "時間軸視覺化",
-  "short_name": "時間軸",
-  "description": "在瀏覽器把 Google 時間軸匯出檔轉成旅行動畫影片。",
+  "name": "Timeline Visualizer",
+  "short_name": "Timeline",
+  "description": "Turn Google Timeline into a travel video on-device. Timeline never uploaded.",
   "start_url": "./",
   "display": "standalone",
+  "orientation": "any",
   "background_color": "#f6f3ee",
   "theme_color": "#1c2a24",
+  "categories": ["travel", "photo", "utilities"],
   "icons": [
     {
       "src": "./icon.svg",
       "sizes": "any",
       "type": "image/svg+xml",
-      "purpose": "any"
+      "purpose": "any maskable"
     }
   ],
   "share_target": {

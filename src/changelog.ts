@@ -9,6 +9,36 @@ export interface ChangelogVersion {
 /** Newest first. Each locale keeps its own wording; older releases stay listed. */
 export const CHANGELOG: ChangelogVersion[] = [
   {
+    version: '1.7.0',
+    date: '2026-08-21',
+    items: {
+      zh: [
+        '簡單／Pro 雙模式：首屏極簡三步，全部 1.6 功能改收納不刪除',
+        '預設直式社群成片（動態鏡頭、城市章節、暖色、字幕）',
+        '鏡頭緩動、停留點呼吸感；隱私信任徽章與 PWA 安裝按鈕',
+        'Android 打包骨架（Capacitor／TWA 說明）準備對標 ahn-lab APK',
+      ],
+      en: [
+        'Simple/Pro UI: three-step first screen; all 1.6 features kept in drawers',
+        'Default portrait social recipe (dynamic camera, city chapters, warm grade, captions)',
+        'Camera easing, stay-point pulse; privacy trust badges and PWA install',
+        'Android packaging scaffold (Capacitor/TWA) to match ahn-lab APK battlefield',
+      ],
+      ja: [
+        'シンプル／Pro：最初の3ステップ。1.6機能は折りたたみで全残し',
+        '初期は縦型SNS向け（ダイナミックカメラ・都市章・暖色・字幕）',
+        'カメライージング、滞在点の呼吸、信頼バッジ、PWAインストール',
+        'Android 包装スケルトン（Capacitor／TWA）で APK 戦場に備える',
+      ],
+      ko: [
+        '심플/Pro: 첫 화면 3단계. 1.6 기능은 접어서 모두 유지',
+        '기본 세로 숏폼(다이내믹 카메라, 도시 챕터, 따뜻한 색감, 자막)',
+        '카메라 이징, 체류점 호흡, 신뢰 배지, PWA 설치',
+        'Android 패키징 스캐폴드(Capacitor/TWA)로 APK 전장 대비',
+      ],
+    },
+  },
+  {
     version: '1.6.1',
     date: '2026-08-21',
     items: {

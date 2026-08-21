@@ -6,7 +6,7 @@ import {
   Output,
   Quality,
 } from 'mediabunny';
-import { frameAtElapsedSeconds } from './animation';
+import { frameAtElapsedSeconds, easeInOutCubic } from './animation';
 import { chapterLabelFor } from './chapters';
 import type { Locale } from './i18n';
 import { placeLabelAtProgress } from './places';
@@ -195,8 +195,9 @@ async function encodeWithCodec(
     } else if (frame < introFrameCount + journeyFrameCount) {
       const journeyFrame = frame - introFrameCount;
       const raw = journeyFrameCount === 1 ? 1 : journeyFrame / (journeyFrameCount - 1);
+      const eased = easeInOutCubic(raw);
       animationFrame = {
-        journeyProgress: options.reverseRoute ? 1 - raw : raw,
+        journeyProgress: options.reverseRoute ? 1 - eased : eased,
         outroProgress: 0,
       };
     } else {
@@ -234,6 +235,7 @@ async function encodeWithCodec(
       introTitle: introProgress > 0 ? options.title : null,
       introSubtitle: introProgress > 0 ? options.periodLabel : null,
       introProgress,
+      journeyPulse: animationFrame.journeyProgress,
     });
     await source.add(frame * frameDuration, frameDuration, { keyFrame: frame % fps === 0 });
     options.onProgress?.((frame + 1) / frameCount);

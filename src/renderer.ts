@@ -450,10 +450,16 @@ export function drawFrame(
 
   if (style.stayMarkers?.length) {
     context.save();
-    context.fillStyle = 'rgba(196,92,38,0.9)';
+    const pulse = 0.65 + 0.35 * Math.sin((style.journeyPulse ?? 0) * Math.PI * 2);
     for (const marker of style.stayMarkers) {
+      const radius = Math.max(5, size / 100) * pulse;
       context.beginPath();
-      context.arc(marker.x, marker.y, Math.max(4, size / 120), 0, Math.PI * 2);
+      context.fillStyle = 'rgba(196,92,38,0.22)';
+      context.arc(marker.x, marker.y, radius * 2.2, 0, Math.PI * 2);
+      context.fill();
+      context.beginPath();
+      context.fillStyle = 'rgba(196,92,38,0.95)';
+      context.arc(marker.x, marker.y, radius, 0, Math.PI * 2);
       context.fill();
     }
     context.restore();

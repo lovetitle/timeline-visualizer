@@ -157,9 +157,36 @@ export function wireExtras(host: ExtrasHost): void {
     });
   }
 
+  let deferredInstall: BeforeInstallPromptEvent | null = null;
+  const installButtons = [
+    document.getElementById('pwa-install-button'),
+    document.getElementById('pwa-install-footer'),
+  ].filter(Boolean) as HTMLElement[];
+  window.addEventListener('beforeinstallprompt', (event) => {
+    event.preventDefault();
+    deferredInstall = event as BeforeInstallPromptEvent;
+    for (const button of installButtons) button.classList.remove('hidden');
+  });
+  const promptInstall = async () => {
+    if (!deferredInstall) {
+      document.getElementById('pwa-hint')?.scrollIntoView({ behavior: 'smooth' });
+      return;
+    }
+    await deferredInstall.prompt();
+    deferredInstall = null;
+    for (const button of installButtons) button.classList.add('hidden');
+  };
+  for (const button of installButtons) {
+    button.addEventListener('click', () => { void promptInstall(); });
+  }
+
   window.addEventListener('beforeunload', () => {
     persistSettingsLocally(collectSettingsFromDom());
   });
+}
+
+interface BeforeInstallPromptEvent extends Event {
+  prompt: () => Promise<void>;
 }
 
 export function refreshExtrasLabels(locale: string): void {
