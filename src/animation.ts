@@ -7,21 +7,26 @@ function clamp(value: number, minimum = 0, maximum = 1): number {
   return Math.max(minimum, Math.min(maximum, value));
 }
 
-export function totalDurationSeconds(journeyDurationSeconds: number): number {
-  return Math.max(1, journeyDurationSeconds) + OUTRO_SECONDS;
+export function totalDurationSeconds(
+  journeyDurationSeconds: number,
+  outroHoldSeconds = OUTRO_SECONDS,
+): number {
+  return Math.max(1, journeyDurationSeconds) + Math.max(OUTRO_TRANSITION_SECONDS, outroHoldSeconds);
 }
 
 export function frameAtElapsedSeconds(
   elapsedSeconds: number,
   journeyDurationSeconds: number,
+  outroHoldSeconds = OUTRO_SECONDS,
 ): TimelineFrame {
   const journeySeconds = Math.max(1, journeyDurationSeconds);
   if (elapsedSeconds <= journeySeconds) {
     return { journeyProgress: clamp(elapsedSeconds / journeySeconds), outroProgress: 0 };
   }
+  const transition = Math.max(OUTRO_TRANSITION_SECONDS, Math.min(outroHoldSeconds, OUTRO_TRANSITION_SECONDS + 2));
   return {
     journeyProgress: 1,
-    outroProgress: clamp((elapsedSeconds - journeySeconds) / OUTRO_TRANSITION_SECONDS),
+    outroProgress: clamp((elapsedSeconds - journeySeconds) / transition),
   };
 }
 

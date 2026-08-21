@@ -43,6 +43,17 @@ export interface TimelineFrame {
   outroProgress: number;
 }
 
+export interface DrawStyle {
+  route: string;
+  routeFade: string;
+  marker: string;
+  markerRing: string;
+  titleBg: string;
+  title: string;
+  subtitle: string;
+  placeLabel?: string | null;
+}
+
 export interface PreparedJourney {
   points: GeoPoint[];
   worldPoints: WorldPoint[];
@@ -52,4 +63,5 @@ export interface PreparedJourney {
   cameraTrack: CameraTrack;
   overviewViewport: Viewport;
   tiles: Map<string, HTMLImageElement>;
+  distanceAtProgress: (progress: number) => number;
 }

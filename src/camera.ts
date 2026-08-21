@@ -292,6 +292,7 @@ function rawViewport(
   size: number,
   movement: CameraMovementProfile,
   legs: JourneyLeg[],
+  aspect = 1,
 ): Viewport {
   const current = worldPositionAtProgress(journey, progress);
   const proportionalContextKm = clamp(
@@ -328,7 +329,6 @@ function rawViewport(
   }
   const contentSpanX = Math.max(0.00015, maxX - minX);
   const contentSpanY = Math.max(0.00015, maxY - minY);
-  const aspect = 1;
   const spanY = clamp(
     Math.max(contentSpanY * padding, contentSpanX * padding / aspect),
     movement.minimumViewportSpan,
@@ -360,14 +360,14 @@ export function buildCameraTrack(
   journey: CameraJourney,
   size: number,
   cameraMovement: CameraMovement,
+  aspect = 1,
 ): CameraTrack {
-  const aspect = 1;
   const movement = MOVEMENT_PROFILES[cameraMovement];
   const legs = buildLegs(journey);
   const rawSamples = Array.from({ length: CAMERA_TRACK_SAMPLES + 1 }, (_, sample) => {
     const progress = sample / CAMERA_TRACK_SAMPLES;
     return {
-      viewport: rawViewport(journey, progress, size, movement, legs),
+      viewport: rawViewport(journey, progress, size, movement, legs, aspect),
       marker: worldPositionAtProgress(journey, progress).point,
     };
   });

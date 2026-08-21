@@ -1,12 +1,25 @@
-import { BufferTarget, CanvasSource, Mp4OutputFormat, Output, Quality } from 'mediabunny';
-import { frameAtElapsedSeconds, OUTRO_SECONDS } from './animation';
+import {
+  AudioBufferSource,
+  BufferTarget,
+  CanvasSource,
+  Mp4OutputFormat,
+  Output,
+  Quality,
+} from 'mediabunny';
+import { frameAtElapsedSeconds } from './animation';
+import { placeLabelAtProgress } from './places';
 import { drawFrame } from './renderer';
-import type { PreparedJourney } from './types';
+import type { DrawStyle, PreparedJourney } from './types';
 
 export interface ExportOptions {
   durationSeconds: number;
   title: string;
   periodLabel: string;
+  style: DrawStyle;
+  outroHoldSeconds: number;
+  showPlaceLabels: boolean;
+  locale: 'zh' | 'en';
+  audioBuffer?: AudioBuffer | null;
   onProgress?: (fraction: number) => void;
   signal?: AbortSignal;
 }
@@ -38,6 +51,14 @@ export function isMp4(buffer: ArrayBuffer): boolean {
   return String.fromCharCode(...bytes).startsWith('ftyp');
 }
 
+function bitrateForSize(width: number, height: number): number {
+  const pixels = width * height;
+  if (pixels >= 1920 * 1080) return 8_000_000;
+  if (pixels >= 1080 * 1080) return 5_000_000;
+  if (pixels >= 720 * 720) return 3_500_000;
+  return 2_500_000;
+}
+
 export async function createJourneyMp4(
   canvas: HTMLCanvasElement,
   journey: PreparedJourney,
@@ -50,7 +71,7 @@ export async function createJourneyMp4(
   const fps = 24;
   const frameDuration = 1 / fps;
   const journeyFrameCount = Math.max(1, Math.round(options.durationSeconds * fps));
-  const outroFrameCount = Math.round(OUTRO_SECONDS * fps);
+  const outroFrameCount = Math.round(Math.max(1.5, options.outroHoldSeconds) * fps);
   const frameCount = journeyFrameCount + outroFrameCount;
   const target = new BufferTarget();
   const output = new Output({
@@ -60,18 +81,36 @@ export async function createJourneyMp4(
   const source = new CanvasSource(canvas, {
     codec: 'avc',
     fullCodecString: 'avc1.42001f',
-    quality: new Quality({ bitrate: 2_500_000 }),
+    quality: new Quality({ bitrate: bitrateForSize(canvas.width, canvas.height) }),
     keyFrameInterval: 1,
     hardwareAcceleration: 'no-preference',
   });
   output.addVideoTrack(source, { frameRate: fps });
+
+  let audioSource: AudioBufferSource | null = null;
+  if (options.audioBuffer) {
+    try {
+      audioSource = new AudioBufferSource({ codec: 'aac', bitrate: 128_000 });
+      output.addAudioTrack(audioSource);
+    } catch {
+      audioSource = null;
+    }
+  }
+
   output.setMetadataTags({ title: options.title });
   await output.start();
+  if (audioSource && options.audioBuffer) {
+    try {
+      await audioSource.add(options.audioBuffer);
+    } catch {
+      // Keep video-only if audio encoding is unsupported.
+    }
+  }
 
   for (let frame = 0; frame < frameCount; frame += 1) {
     if (options.signal?.aborted) {
       await output.cancel();
-      throw new DOMException('Video creation was cancelled.', 'AbortError');
+      throw new DOMException('已取消產出影片。', 'AbortError');
     }
     const animationFrame = frame < journeyFrameCount
       ? {
@@ -81,8 +120,20 @@ export async function createJourneyMp4(
       : frameAtElapsedSeconds(
         options.durationSeconds + (frame - journeyFrameCount) / fps,
         options.durationSeconds,
+        options.outroHoldSeconds,
       );
-    drawFrame(canvas, journey, animationFrame, options.title, options.periodLabel);
+    const placeLabel = options.showPlaceLabels
+      ? placeLabelAtProgress(
+        journey.points,
+        journey.cumulativeDistanceKm,
+        animationFrame.journeyProgress,
+        options.locale,
+      )
+      : null;
+    drawFrame(canvas, journey, animationFrame, options.title, options.periodLabel, {
+      ...options.style,
+      placeLabel,
+    });
     await source.add(frame * frameDuration, frameDuration, { keyFrame: frame % fps === 0 });
     options.onProgress?.((frame + 1) / frameCount);
   }
