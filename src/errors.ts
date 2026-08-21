@@ -70,13 +70,15 @@ export function classifyError(error: unknown): ClassifiedError {
       hintEn: 'Timeline may be empty. Restore backup or check the file.',
     };
   }
-  if (/WebCodecs|H\.264|無法產出 MP4|encoder/i.test(message)) {
+  if (/WebCodecs|H\.264|無法產出 MP4|encoder|編碼|解析度|720p|480p/i.test(message)) {
     return {
       code: 'encoder-unsupported',
-      titleZh: '瀏覽器不能編碼影片',
-      titleEn: 'Browser cannot encode video',
-      hintZh: '請改用最新版 Chrome、Edge，或 Safari 16.4 以上。',
-      hintEn: 'Use latest Chrome, Edge, or Safari 16.4+.',
+      titleZh: '此解析度無法編碼',
+      titleEn: 'Cannot encode this resolution',
+      hintZh: message.includes('720') || message.includes('480') || message.includes('×')
+        ? message
+        : '1080p 需要較高的 H.264 等級。請改用最新 Chrome／Edge，或先選 720p／480p。',
+      hintEn: '1080p needs a higher H.264 level. Use latest Chrome/Edge, or try 720p/480p.',
     };
   }
   if (/audio|音訊|BGM/i.test(message)) {

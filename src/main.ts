@@ -48,7 +48,7 @@ import {
 } from './timeline';
 import type { RawSignalPoint, RawSignalProcessingResult } from './timeline';
 import type { CameraMovement, GeoPoint, MonthOption, PreparedJourney } from './types';
-import { canCreateMp4, createJourneyMp4 } from './video';
+import { canCreateMp4, createJourneyMp4, alignEncodeSize } from './video';
 import { APP_VERSION } from './version';
 
 function element<T extends HTMLElement>(id: string): T {
@@ -321,8 +321,25 @@ function selectedDistanceKm(points: GeoPoint[]): number {
 
 function applyCanvasFormat(): void {
   const format = formatById(formatSelect.value);
-  canvas.width = format.width;
-  canvas.height = format.height;
+  canvas.width = alignEncodeSize(format.width);
+  canvas.height = alignEncodeSize(format.height);
+}
+
+async function refreshEncodingSupport(): Promise<void> {
+  const format = formatById(formatSelect.value);
+  compatibilityChecked = false;
+  refreshActionAvailability();
+  const supported = await canCreateMp4(format.width, format.height);
+  compatibilityChecked = true;
+  encodingSupported = supported;
+  if (supported) {
+    compatibilityStatus.textContent = t(locale, 'videoOk');
+  } else {
+    compatibilityStatus.textContent = isEnglishLike()
+      ? `This browser cannot encode ${format.width}×${format.height}. Try 720p or 480p.`
+      : `此瀏覽器無法編碼 ${format.width}×${format.height}。請改選 720p 或 480p。`;
+  }
+  refreshActionAvailability();
 }
 
 function refreshActionAvailability(points = currentPoints()): void {
@@ -677,8 +694,13 @@ sampleButton.addEventListener('click', async () => {
 
 [
   startSelect, endSelect, startDateInput, endDateInput, durationSelect, cameraMovementSelect,
-  compressionSelect, outlierSelect, themeSelect, formatSelect, placeLabelsToggle, outroHoldInput,
+  compressionSelect, outlierSelect, themeSelect, placeLabelsToggle, outroHoldInput,
 ].forEach((node) => node.addEventListener('change', updateSelection));
+
+formatSelect.addEventListener('change', () => {
+  updateSelection();
+  void refreshEncodingSupport();
+});
 
 exactDateToggle.addEventListener('change', () => {
   monthRangeFields.classList.toggle('hidden', exactDateToggle.checked);
@@ -1054,12 +1076,7 @@ function anotherRound(): void {
   startDateInput.focus();
 }
 
-void canCreateMp4(480, 480).then((supported) => {
-  compatibilityChecked = true;
-  encodingSupported = supported;
-  compatibilityStatus.textContent = supported ? t(locale, 'videoOk') : t(locale, 'videoOnlyPreview');
-  refreshActionAvailability();
-});
+void refreshEncodingSupport();
 
 async function startHeroDemo(): Promise<void> {
   try {
