@@ -56,6 +56,8 @@ export interface DrawStyle {
   chapterLabel?: string | null;
   markerStyle?: 'dot' | 'plane' | 'foot';
   compareWorldPoints?: WorldPoint[];
+  compareOpacity?: number;
+  burnCaptions?: boolean;
 }
 
 export interface PreparedJourney {

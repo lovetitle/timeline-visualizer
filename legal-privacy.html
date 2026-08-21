@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>隱私政策 · 時間軸視覺化</title>
+    <link rel="icon" href="./icon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body>
+    <div class="page">
+      <header class="hero">
+        <p class="eyebrow"><a href="./">← 回到工具</a></p>
+        <h1>隱私政策</h1>
+      </header>
+      <section class="panel">
+        <p>我們設計本工具的目標是：時間軸檔案盡可能不離開你的裝置。</p>
+        <h2>我們不收集</h2>
+        <ul class="faq-list">
+          <li>不會把 Timeline.json／GPX／KML 上傳到本站伺服器。</li>
+          <li>不會要求 Google 帳號登入來讀取時間軸。</li>
+        </ul>
+        <h2>會發生的網路請求</h2>
+        <ul class="faq-list">
+          <li>載入本站靜態資源（HTML／JS／CSS）。</li>
+          <li>在你同意後，向 CARTO 請求地圖圖磚（可能透露選取範圍與 IP）。</li>
+        </ul>
+        <h2>本機儲存</h2>
+        <ul class="faq-list">
+          <li>localStorage：語言、主題、設定、造訪次數、匿名產出成功／失敗計數、統計快照。</li>
+          <li>IndexedDB：地圖圖磚快取、範例影片快取。</li>
+          <li>你可以清除瀏覽器網站資料以刪除上述內容。</li>
+        </ul>
+        <p><a class="button secondary" href="./privacy.html">隱私報告（圖磚）</a> <a class="button" href="./">回到工具</a></p>
+      </section>
+    </div>
+  </body>
+</html>

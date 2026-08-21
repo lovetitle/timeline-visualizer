@@ -39,6 +39,8 @@
               <a href="./faq.html" data-i18n="faqLink">常見問題</a>
               <a href="./privacy.html" data-i18n="privacyLink">隱私報告</a>
               <a href="./domain.html" data-i18n="domainLink">自訂網域</a>
+              <a href="./stats.html" data-i18n="statsLink">旅程統計</a>
+              <a href="./terms.html" data-i18n="termsLink">使用條款</a>
             </p>
             <p class="shortcut-hint muted" data-i18n="shortcutHint">快捷鍵：空白鍵預覽 · Enter 產出</p>
           </div>
@@ -167,7 +169,12 @@
           </label>
 
           <div id="period-controls">
-            <label class="checkbox-row">
+            <label class="date-scrubbers">
+            <span data-i18n="dateScrubber">日期區間滑桿</span>
+            <input id="range-scrub-start" type="range" min="0" max="1000" value="0" aria-label="開始" />
+            <input id="range-scrub-end" type="range" min="0" max="1000" value="1000" aria-label="結束" />
+          </label>
+          <label class="checkbox-row">
               <input id="exact-date-toggle" type="checkbox" />
               <span data-i18n="exactDates">指定精確日期</span>
             </label>
@@ -193,6 +200,11 @@
             </div>
           </div>
 
+          <div class="preset-actions" role="group" aria-label="快速預設">
+            <button id="preset-reels" class="ghost" type="button" data-i18n="presetReels">短影音預設</button>
+            <button id="preset-island" class="ghost" type="button" data-i18n="presetIsland">環島預設</button>
+            <button id="preset-business" class="ghost" type="button" data-i18n="presetBusiness">出差預設</button>
+          </div>
           <div class="smart-actions" role="group" aria-label="智慧選取">
             <button id="smart-this-year" class="ghost" type="button" data-i18n="smartThisYear">今年行程</button>
             <button id="smart-recent" class="ghost" type="button" data-i18n="smartRecent">最近旅程</button>
@@ -338,6 +350,14 @@
             <span data-i18n="privacyBlur">模糊住家附近</span>
           </label>
 
+          <label class="checkbox-row" for="burn-captions-toggle">
+            <input id="burn-captions-toggle" type="checkbox" checked />
+            <span data-i18n="burnCaptions">燒錄字幕進影片</span>
+          </label>
+          <label class="checkbox-row" for="auto-fallback-toggle">
+            <input id="auto-fallback-toggle" type="checkbox" checked />
+            <span data-i18n="autoFallback">失敗時自動降解析度</span>
+          </label>
           <label class="checkbox-row" for="activity-pace-toggle">
             <input id="activity-pace-toggle" type="checkbox" />
             <span data-i18n="activityPace">依交通方式調整節奏</span>
@@ -353,6 +373,10 @@
               <span data-i18n="compareToggle">與該年對照</span>
             </label>
           </div>
+          <label>
+            <span data-i18n="compareOpacity">對照透明度</span>
+            <input id="compare-opacity" type="range" min="5" max="90" value="35" />
+          </label>
 
           </div>
           </details>
@@ -421,6 +445,11 @@
               <span id="eta-label" class="muted"></span>
             </span>
           </div>
+          <label class="scrubber-row">
+            <span data-i18n="scrubberLabel">預覽進度</span>
+            <input id="preview-scrubber" type="range" min="0" max="1000" value="0" />
+          </label>
+          <ul id="chapter-toc" class="chapter-toc" aria-label="章節目錄"></ul>
           <canvas id="journey-canvas" width="480" height="480"></canvas>
           <progress id="export-progress" class="hidden" value="0" max="1"></progress>
           <button id="pause-button" class="secondary cancel-button hidden" type="button" data-i18n="pauseEncode">暫停產出</button>
@@ -433,6 +462,12 @@
             <button id="copy-link-button" class="secondary" type="button" data-i18n="copyLink">複製網站連結</button>
             <button id="download-poster-button" class="secondary" type="button" data-i18n="downloadPoster">下載預覽圖</button>
             <button id="download-heatmap-button" class="secondary" type="button" data-i18n="heatmapPoster">下載熱力圖海報</button>
+            <button id="download-story-button" class="secondary" type="button" data-i18n="storyPoster">下載故事海報</button>
+            <button id="export-tiles-button" class="secondary" type="button" data-i18n="exportTiles">匯出離線圖磚</button>
+            <label class="ghost file-ghost">
+              <span data-i18n="importTiles">匯入離線圖磚</span>
+              <input id="import-tiles-input" type="file" accept="application/json,.json" />
+            </label>
             <button id="download-srt-button" class="secondary" type="button" data-i18n="downloadSrt">下載章節 SRT</button>
             <button id="another-round-button" class="secondary" type="button" data-i18n="anotherRound">再開一輪（保留設定）</button>
           </div>
@@ -461,15 +496,26 @@
           ·
           <a href="./domain.html" data-i18n="domainLink">自訂網域</a>
           ·
+          <a href="./stats.html" data-i18n="statsLink">旅程統計</a>
+          ·
+          <a href="./terms.html" data-i18n="termsLink">使用條款</a>
+          ·
+          <a href="./legal-privacy.html" data-i18n="legalPrivacyLink">隱私政策</a>
+          ·
           <a id="report-issue" href="mailto:timeline-visualizer@example.com?subject=%E6%99%82%E9%96%93%E8%BB%B8%E8%A6%96%E8%A6%BA%E5%8C%96%20%E5%95%8F%E9%A1%8C%E5%9B%9E%E5%A0%B1" data-i18n="reportIssue">回報問題</a>
         </p>
         <p id="pwa-hint" data-i18n="installPwa">加到主畫面提示：用瀏覽器選單「安裝應用程式」或「加入主畫面」。</p>
         <p id="visit-count" class="muted"></p>
         <p id="perf-label" class="muted"></p>
+        <p id="anon-stats-label" class="muted"></p>
         <p id="version-label" class="muted"></p>
       </footer>
     </div>
 
+    <div id="mobile-action-bar" class="mobile-action-bar" role="toolbar" aria-label="快速操作">
+      <button id="mobile-preview-button" class="secondary" type="button" data-i18n="preview">預覽</button>
+      <button id="mobile-create-button" type="button" data-i18n="create">產出 MP4</button>
+    </div>
     <div id="sticky-progress" class="sticky-progress hidden" role="status">
       <span id="sticky-progress-label">正在產出…</span>
       <progress id="sticky-progress-bar" value="0" max="1"></progress>
@@ -483,6 +529,14 @@
     <dialog id="tutorial-dialog" aria-labelledby="tutorial-heading">
       <div class="dialog-card tutorial-card">
         <h2 id="tutorial-heading" data-i18n="tutorialTitle">45 秒：匯出 → 上傳 → 產出</h2>
+        <div class="tutorial-phone" aria-hidden="true">
+          <div class="tutorial-phone-notch"></div>
+          <div class="tutorial-phone-screen">
+            <div class="tutorial-rec-dot"></div>
+            <span class="tutorial-rec-label">REC</span>
+            <div class="tutorial-phone-path"></div>
+          </div>
+        </div>
         <div class="tutorial-stage" aria-live="polite">
           <div class="tutorial-slide is-active" data-step="1">
             <strong>1. 匯出</strong>

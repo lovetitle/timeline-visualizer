@@ -39,7 +39,7 @@ let parseWorker: Worker | null = null;
 let parseSeq = 0;
 
 export function parseJsonInWorker(text: string): Promise<unknown> {
-  if (text.length < 1_500_000) {
+  if (text.length < 500_000) {
     return Promise.resolve(JSON.parse(text) as unknown);
   }
   if (!parseWorker) parseWorker = new ParseWorker();

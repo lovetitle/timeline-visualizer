@@ -54,6 +54,18 @@ import type { RawSignalPoint, RawSignalProcessingResult } from './timeline';
 import type { CameraMovement, GeoPoint, MonthOption, PreparedJourney } from './types';
 import { canCreateMp4, createJourneyMp4, alignEncodeSize } from './video';
 import { APP_VERSION } from './version';
+import {
+  fallbackFormatIds,
+  noteEncodeFail,
+  noteEncodeOk,
+  notePreviewOk,
+  refreshChapterToc,
+  snapshotStats,
+  wireV14,
+  type V14Host,
+} from './wireV14';
+
+let v14Host!: V14Host;
 
 function element<T extends HTMLElement>(id: string): T {
   const found = document.getElementById(id);
@@ -355,6 +367,10 @@ function refreshActionAvailability(points = currentPoints()): void {
   const hasJourney = points.length >= 2 && selectedDistanceKm(points) > 0;
   previewButton.disabled = isExporting || isPreparing || !hasJourney;
   createButton.disabled = isExporting || isPreparing || !hasJourney || !encodingSupported;
+  const mobilePreview = document.getElementById('mobile-preview-button') as HTMLButtonElement | null;
+  const mobileCreate = document.getElementById('mobile-create-button') as HTMLButtonElement | null;
+  if (mobilePreview) mobilePreview.disabled = previewButton.disabled;
+  if (mobileCreate) mobileCreate.disabled = createButton.disabled;
   if (!compatibilityChecked) {
     createButton.title = locale === 'en' ? 'Checking video support.' : '正在檢查瀏覽器的影片支援。';
   } else if (!encodingSupported) {
@@ -422,6 +438,7 @@ function updateSelection(): void {
   prepared = null;
   selectedSignature = '';
   refreshActionAvailability(points);
+  snapshotStats(allPoints.length > 0 ? allPoints : points, locale);
 }
 
 function renderMergeList(): void {
@@ -630,6 +647,8 @@ function currentStyle() {
       ? comparePointsForYear(allPoints, compareYear())
       : []);
   if (overlay.length > 1) compareWorld = compareWorldPoints(overlay);
+  const opacityInput = document.getElementById('compare-opacity') as HTMLInputElement | null;
+  const burn = Boolean((document.getElementById('burn-captions-toggle') as HTMLInputElement | null)?.checked);
   return {
     route: theme.route,
     routeFade: theme.routeFade,
@@ -640,7 +659,37 @@ function currentStyle() {
     subtitle: theme.subtitle,
     markerStyle: readMarkerStyle(),
     compareWorldPoints: compareWorld,
+    compareOpacity: Number(opacityInput?.value || 35) / 100,
+    burnCaptions: burn,
   };
+}
+
+async function renderPreviewAt(progress01: number): Promise<void> {
+  if (!requireMapConsent()) return;
+  const journey = await getPreparedJourney();
+  const frame = {
+    journeyProgress: Math.max(0, Math.min(1, progress01)),
+    outroProgress: 0,
+  };
+  const burn = currentStyle().burnCaptions;
+  const placeLabel = (placeLabelsToggle.checked || burn)
+    ? placeLabelAtProgress(journey.points, journey.cumulativeDistanceKm, frame.journeyProgress, uiLocale(locale))
+    : null;
+  const mode = burn && chapterMode() === 'off' ? 'day' : chapterMode();
+  const chapterLabel = chapterLabelFor(
+    mode,
+    journey.points,
+    journey.cumulativeDistanceKm,
+    frame.journeyProgress,
+    uiLocale(locale),
+  );
+  drawFrame(canvas, journey, frame, titleInput.value.trim(), currentPeriodLabel(), {
+    ...currentStyle(),
+    placeLabel,
+    chapterLabel,
+  });
+  const scrubber = document.getElementById('preview-scrubber') as HTMLInputElement | null;
+  if (scrubber) scrubber.value = String(Math.round(progress01 * 1000));
 }
 
 fileInput.addEventListener('change', async () => {
@@ -788,6 +837,7 @@ previewButton.addEventListener('click', async () => {
   refreshActionAvailability();
   try {
     const journey = await getPreparedJourney();
+    refreshChapterToc(v14Host);
     const started = performance.now();
     const previewJourneyDuration = Math.min(8, Number(durationSelect.value));
     const outroHold = Number(outroHoldInput.value) || 2.5;
@@ -797,11 +847,14 @@ previewButton.addEventListener('click', async () => {
       const elapsedSeconds = Math.min(previewDuration, ((now - started) / 1000) * speed);
       const fraction = elapsedSeconds / previewDuration;
       const frame = frameAtElapsedSeconds(elapsedSeconds, previewJourneyDuration, outroHold);
-      const placeLabel = placeLabelsToggle.checked
+      const scrubber = document.getElementById('preview-scrubber') as HTMLInputElement | null;
+      if (scrubber) scrubber.value = String(Math.round(frame.journeyProgress * 1000));
+      const burn = currentStyle().burnCaptions;
+      const placeLabel = (placeLabelsToggle.checked || burn)
         ? placeLabelAtProgress(journey.points, journey.cumulativeDistanceKm, frame.journeyProgress, uiLocale(locale))
         : null;
       const chapterLabel = chapterLabelFor(
-        chapterMode(),
+        burn && chapterMode() === 'off' ? 'day' : chapterMode(),
         journey.points,
         journey.cumulativeDistanceKm,
         frame.journeyProgress,
@@ -818,6 +871,8 @@ previewButton.addEventListener('click', async () => {
       if (fraction < 1) previewAnimation = requestAnimationFrame(tick);
     };
     previewAnimation = requestAnimationFrame(tick);
+    notePreviewOk();
+    snapshotStats(journey.points, locale);
   } catch (error) {
     setError(localizeError(error, locale === 'en' ? 'Preview failed.' : '預覽失敗。'));
   } finally {
@@ -883,39 +938,73 @@ async function runExportOnce(): Promise<void> {
     }
   };
   try {
-    const blob = await withRetry(async (attempt) => {
-      if (attempt > 0) {
+    const originalFormat = formatSelect.value;
+    const autoFallback = Boolean((document.getElementById('auto-fallback-toggle') as HTMLInputElement | null)?.checked);
+    const formatAttempts = autoFallback
+      ? [originalFormat, ...fallbackFormatIds(originalFormat)]
+      : [originalFormat];
+    let blob: Blob | null = null;
+    let lastError: unknown;
+    for (const formatId of formatAttempts) {
+      if (exportController.signal.aborted) throw new DOMException('已取消產出影片。', 'AbortError');
+      if (formatId !== formatSelect.value) {
+        formatSelect.value = formatId;
         prepared = null;
         selectedSignature = '';
+        applyCanvasFormat();
         progressLabel.textContent = isEnglishLike()
-          ? `Retrying encode (${attempt + 1})…`
-          : `正在重試產出（第 ${attempt + 1} 次）…`;
+          ? `Falling back to ${formatId}…`
+          : `改以降級解析度 ${formatId} 重試…`;
       }
-      const journey = await getPreparedJourney(exportController!.signal);
-      progressLabel.textContent = isEnglishLike() ? 'Creating MP4' : '正在產出 MP4';
-      return createJourneyMp4(canvas, journey, {
-        durationSeconds: Number(durationSelect.value),
-        title: titleInput.value.trim() || (isEnglishLike() ? 'My Journey' : '我的旅程'),
-        periodLabel: currentPeriodLabel(),
-        style: currentStyle(),
-        outroHoldSeconds: Number(outroHoldInput.value) || 2.5,
-        showPlaceLabels: placeLabelsToggle.checked,
-        chapterMode: chapterMode(),
-        locale: uiLocale(locale),
-        audioBuffer,
-        signal: exportController!.signal,
-        pauseGate,
-        onProgress: (fraction) => {
-          updateProgress(
-            fraction,
-            isEnglishLike()
-              ? `Creating MP4 ${Math.round(fraction * 100)}%`
-              : `正在產出 MP4 ${Math.round(fraction * 100)}%`,
-          );
-        },
-      });
-    }, { retries: 2, delayMs: 500 });
+      try {
+        blob = await withRetry(async (attempt) => {
+          if (attempt > 0) {
+            prepared = null;
+            selectedSignature = '';
+            progressLabel.textContent = isEnglishLike()
+              ? `Retrying encode (${attempt + 1})…`
+              : `正在重試產出（第 ${attempt + 1} 次）…`;
+          }
+          const journey = await getPreparedJourney(exportController!.signal);
+          const style = currentStyle();
+          const burn = Boolean(style.burnCaptions);
+          progressLabel.textContent = isEnglishLike() ? 'Creating MP4' : '正在產出 MP4';
+          return createJourneyMp4(canvas, journey, {
+            durationSeconds: Number(durationSelect.value),
+            title: titleInput.value.trim() || (isEnglishLike() ? 'My Journey' : '我的旅程'),
+            periodLabel: currentPeriodLabel(),
+            style,
+            outroHoldSeconds: Number(outroHoldInput.value) || 2.5,
+            showPlaceLabels: placeLabelsToggle.checked || burn,
+            chapterMode: burn && chapterMode() === 'off' ? 'day' : chapterMode(),
+            locale: uiLocale(locale),
+            audioBuffer,
+            signal: exportController!.signal,
+            pauseGate,
+            onProgress: (fraction) => {
+              updateProgress(
+                fraction,
+                isEnglishLike()
+                  ? `Creating MP4 ${Math.round(fraction * 100)}%`
+                  : `正在產出 MP4 ${Math.round(fraction * 100)}%`,
+              );
+            },
+          });
+        }, { retries: 1, delayMs: 400 });
+        break;
+      } catch (error) {
+        lastError = error;
+        if (error instanceof DOMException && error.name === 'AbortError') throw error;
+      }
+    }
+    if (!blob) throw lastError ?? new Error('encode failed');
+    if (formatSelect.value !== originalFormat) {
+      // keep successful fallback selection
+      void refreshEncodingSupport();
+    }
     const journey = prepared;
+    noteEncodeOk();
+    snapshotStats(journey?.points ?? currentPoints(), locale);
     if (resultUrl) URL.revokeObjectURL(resultUrl);
     resultUrl = URL.createObjectURL(blob);
     resultFile = new File([blob], 'timeline-journey.mp4', { type: 'video/mp4' });
@@ -971,6 +1060,7 @@ async function runExportOnce(): Promise<void> {
       progress.value = 0;
       etaLabel.textContent = '';
     } else {
+      noteEncodeFail();
       showClassifiedError(error, uiLocale(locale), setError, errorHint);
       progressLabel.textContent = isEnglishLike() ? 'Could not create video' : '無法產出影片';
     }
@@ -1248,7 +1338,42 @@ wireExtras({
   anotherRound,
 });
 
-['map-style-select', 'marker-style-select', 'chapter-select', 'preview-speed-select', 'privacy-blur-toggle', 'compare-toggle', 'compare-year-input', 'activity-pace-toggle']
+v14Host = {
+  locale: () => locale,
+  currentPoints,
+  prepared: () => prepared,
+  updateSelection,
+  requireMapConsent,
+  preview: () => {
+    if (!previewButton.disabled) previewButton.click();
+  },
+  create: () => {
+    if (!createButton.disabled) createButton.click();
+  },
+  getTitle: () => titleInput.value.trim() || (isEnglishLike() ? 'My Journey' : '我的旅程'),
+  getPeriodLabel: currentPeriodLabel,
+  selectedDistanceKm,
+  readMapStyle,
+  chapterMode,
+  setPreviewProgress: (value: number) => { void renderPreviewAt(value); },
+  getCompareOpacity: () => Number((document.getElementById('compare-opacity') as HTMLInputElement | null)?.value || 35) / 100,
+  applyDateRangeFraction: (start01: number, end01: number) => {
+    if (allPoints.length < 2) return;
+    const keys = [...new Set(allPoints.map(pointDateKey))].sort();
+    if (keys.length === 0) return;
+    const startIndex = Math.max(0, Math.min(keys.length - 1, Math.floor(start01 * (keys.length - 1))));
+    const endIndex = Math.max(startIndex, Math.min(keys.length - 1, Math.ceil(end01 * (keys.length - 1))));
+    exactDateToggle.checked = true;
+    exactDateToggle.dispatchEvent(new Event('change'));
+    startDateInput.value = keys[startIndex];
+    endDateInput.value = keys[endIndex];
+    updateSelection();
+  },
+};
+wireV14(v14Host);
+document.getElementById('chapter-select')?.addEventListener('change', () => refreshChapterToc(v14Host));
+
+['map-style-select', 'marker-style-select', 'chapter-select', 'preview-speed-select', 'privacy-blur-toggle', 'compare-toggle', 'compare-year-input', 'activity-pace-toggle', 'burn-captions-toggle', 'auto-fallback-toggle']
   .forEach((id) => {
     document.getElementById(id)?.addEventListener('change', updateSelection);
   });

@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>旅程統計 · 時間軸視覺化</title>
+    <link rel="icon" href="./icon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body>
+    <div class="page">
+      <header class="hero">
+        <p class="eyebrow"><a href="./">← 回到工具</a></p>
+        <h1 data-i18n="statsLink">旅程統計</h1>
+        <p class="lede">在工具頁載入時間軸後，這裡會顯示本機計算的摘要。資料不會上傳。</p>
+      </header>
+      <section class="panel">
+        <p id="stats-empty" class="status">尚未有本機旅程資料。請先到工具頁載入 Timeline 並產出或預覽一次。</p>
+        <div id="stats-panel" class="hidden">
+          <ul id="stats-list" class="faq-list"></ul>
+          <h2>日曆熱力（里程）</h2>
+          <div id="stats-heatmap" class="stats-heatmap" aria-label="日曆熱力"></div>
+          <h2>城市</h2>
+          <p id="stats-cities" class="status"></p>
+        </div>
+        <p><a class="button" href="./">回到工具</a></p>
+      </section>
+    </div>
+    <script type="module">
+      import { loadJourneyStatsSnapshot, renderStatsPage } from '/src/statsPage.ts';
+      renderStatsPage(loadJourneyStatsSnapshot());
+    </script>
+  </body>
+</html>

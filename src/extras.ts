@@ -12,6 +12,8 @@ import {
 } from './settingsStore';
 import { formatPerfSummary } from './perf';
 import { clearTileLog, summarizeTileLog } from './privacyReport';
+import { applyThemeMode, cycleThemeMode, watchSystemTheme, loadThemeMode } from './themeMode';
+import { formatAnonStats } from './anonStats';
 
 export interface ExtrasHost {
   locale: () => string;
@@ -19,6 +21,16 @@ export interface ExtrasHost {
   create: () => void;
   updateSelection: () => void;
   anotherRound: () => void;
+}
+
+function themeToggleLabel(locale: string): string {
+  const mode = loadThemeMode();
+  if (locale === 'en') {
+    return mode === 'system' ? 'Theme: System' : mode === 'dark' ? 'Theme: Dark' : 'Theme: Light';
+  }
+  if (mode === 'system') return locale === 'ja' ? 'テーマ: システム' : locale === 'ko' ? '테마: 시스템' : '主題：跟隨系統';
+  if (mode === 'dark') return locale === 'ja' ? 'テーマ: ダーク' : locale === 'ko' ? '테마: 다크' : '主題：深色';
+  return locale === 'ja' ? 'テーマ: ライト' : locale === 'ko' ? '테마: 라이트' : '主題：淺色';
 }
 
 export function wireExtras(host: ExtrasHost): void {
@@ -31,21 +43,22 @@ export function wireExtras(host: ExtrasHost): void {
   const updateReload = document.getElementById('sw-reload-button');
   const recentList = document.getElementById('recent-list');
   const perfLabel = document.getElementById('perf-label');
+  const anonLabel = document.getElementById('anon-stats-label');
   const privacySummary = document.getElementById('privacy-summary');
   const privacyClear = document.getElementById('privacy-clear-button');
   const tutorialOpen = document.getElementById('tutorial-open-button');
   const tutorialDialog = document.getElementById('tutorial-dialog') as HTMLDialogElement | null;
   const stickyProgress = document.getElementById('sticky-progress');
 
-  const savedTheme = localStorage.getItem('tv-theme-mode');
-  if (savedTheme === 'dark') document.documentElement.dataset.theme = 'dark';
-
-  themeToggle?.addEventListener('click', () => {
-    const next = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
-    if (next === 'dark') document.documentElement.dataset.theme = 'dark';
-    else delete document.documentElement.dataset.theme;
-    localStorage.setItem('tv-theme-mode', next);
-  });
+  applyThemeMode();
+  watchSystemTheme();
+  if (themeToggle) {
+    themeToggle.textContent = themeToggleLabel(host.locale());
+    themeToggle.addEventListener('click', () => {
+      cycleThemeMode();
+      themeToggle.textContent = themeToggleLabel(host.locale());
+    });
+  }
 
   const local = loadLocalSettings();
   if (local) applySettingsToDom(local);
@@ -87,8 +100,7 @@ export function wireExtras(host: ExtrasHost): void {
   });
 
   if (recentList) {
-    const entries = loadRecent();
-    recentList.replaceChildren(...entries.map((entry) => {
+    recentList.replaceChildren(...loadRecent().map((entry) => {
       const item = document.createElement('li');
       item.textContent = `${entry.name} · ${entry.period}`;
       return item;
@@ -96,6 +108,7 @@ export function wireExtras(host: ExtrasHost): void {
   }
 
   if (perfLabel) perfLabel.textContent = formatPerfSummary(host.locale());
+  if (anonLabel) anonLabel.textContent = formatAnonStats(host.locale());
   if (privacySummary) privacySummary.textContent = summarizeTileLog(host.locale());
   privacyClear?.addEventListener('click', () => {
     clearTileLog();
@@ -151,10 +164,14 @@ export function wireExtras(host: ExtrasHost): void {
 
 export function refreshExtrasLabels(locale: string): void {
   const perfLabel = document.getElementById('perf-label');
+  const anonLabel = document.getElementById('anon-stats-label');
   const privacySummary = document.getElementById('privacy-summary');
   const recentList = document.getElementById('recent-list');
+  const themeToggle = document.getElementById('theme-mode-toggle');
   if (perfLabel) perfLabel.textContent = formatPerfSummary(locale);
+  if (anonLabel) anonLabel.textContent = formatAnonStats(locale);
   if (privacySummary) privacySummary.textContent = summarizeTileLog(locale);
+  if (themeToggle) themeToggle.textContent = themeToggleLabel(locale);
   if (recentList) {
     recentList.replaceChildren(...loadRecent().map((entry) => {
       const item = document.createElement('li');

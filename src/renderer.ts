@@ -364,7 +364,7 @@ export function drawFrame(
 
   if (style.compareWorldPoints && style.compareWorldPoints.length > 1) {
     context.save();
-    context.globalAlpha = 0.35;
+    context.globalAlpha = Math.max(0.05, Math.min(1, style.compareOpacity ?? 0.35));
     context.strokeStyle = '#1f6feb';
     context.lineWidth = Math.max(3, size / 160);
     strokeRoute(
@@ -422,8 +422,21 @@ export function drawFrame(
   }
   if (style.placeLabel) {
     context.fillStyle = style.route;
-    context.font = `700 ${22 * scale}px "Segoe UI", "PingFang TC", "Noto Sans TC", sans-serif`;
+    context.font = `700 ${(style.burnCaptions ? 26 : 22) * scale}px "Segoe UI", "PingFang TC", "Noto Sans TC", sans-serif`;
     context.fillText(style.placeLabel, width / 2, style.chapterLabel ? 162 * scale : 138 * scale);
+  }
+  if (style.burnCaptions && (style.chapterLabel || style.placeLabel)) {
+    const caption = style.chapterLabel || style.placeLabel || '';
+    context.fillStyle = 'rgba(28,42,36,0.78)';
+    const boxW = Math.min(width * 0.88, Math.max(180 * scale, context.measureText(caption).width + 48 * scale));
+    const boxY = height - 78 * scale;
+    context.beginPath();
+    context.roundRect((width - boxW) / 2, boxY, boxW, 48 * scale, 12 * scale);
+    context.fill();
+    context.fillStyle = '#f6f3ee';
+    context.font = `700 ${22 * scale}px "Segoe UI", "PingFang TC", "Noto Sans TC", sans-serif`;
+    context.textAlign = 'center';
+    context.fillText(caption, width / 2, boxY + 32 * scale, boxW - 24 * scale);
   }
 
   context.textAlign = 'right';
