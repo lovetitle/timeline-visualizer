@@ -140,6 +140,8 @@ export function wireV14(host: V14Host): void {
   });
 }
 
+import { wireChapterDrag } from './wireV15';
+
 export function refreshChapterToc(host: V14Host): void {
   const toc = document.getElementById('chapter-toc');
   const journey = host.prepared();
@@ -153,16 +155,14 @@ export function refreshChapterToc(host: V14Host): void {
   const chapters = mode === 'city'
     ? buildCityChapters(journey.points, journey.cumulativeDistanceKm, locale)
     : buildDayChapters(journey.points, journey.cumulativeDistanceKm, locale);
-  toc.replaceChildren(...chapters.map((chapter) => {
-    const item = document.createElement('li');
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.className = 'ghost';
-    button.textContent = chapter.label;
-    button.addEventListener('click', () => host.setPreviewProgress(chapter.startProgress));
-    item.append(button);
-    return item;
-  }));
+  wireChapterDrag(
+    toc,
+    chapters,
+    (progress) => host.setPreviewProgress(progress),
+    () => {
+      (window as unknown as { __tvRefreshV15?: () => void }).__tvRefreshV15?.();
+    },
+  );
 }
 
 export function snapshotStats(points: GeoPoint[], locale: Locale): void {

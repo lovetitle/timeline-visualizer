@@ -64,6 +64,9 @@ import {
   wireV14,
   type V14Host,
 } from './wireV14';
+import { saveSuccessSettings, wireV15 } from './wireV15';
+import { pushQualityRow } from './qualityDash';
+import { speedKmhAt } from './smartClips';
 
 let v14Host!: V14Host;
 
@@ -649,6 +652,7 @@ function currentStyle() {
   if (overlay.length > 1) compareWorld = compareWorldPoints(overlay);
   const opacityInput = document.getElementById('compare-opacity') as HTMLInputElement | null;
   const burn = Boolean((document.getElementById('burn-captions-toggle') as HTMLInputElement | null)?.checked);
+  const showAttribution = Boolean((document.getElementById('show-attribution-toggle') as HTMLInputElement | null)?.checked ?? true);
   return {
     route: theme.route,
     routeFade: theme.routeFade,
@@ -661,6 +665,7 @@ function currentStyle() {
     compareWorldPoints: compareWorld,
     compareOpacity: Number(opacityInput?.value || 35) / 100,
     burnCaptions: burn,
+    showAttribution,
   };
 }
 
@@ -687,6 +692,10 @@ async function renderPreviewAt(progress01: number): Promise<void> {
     ...currentStyle(),
     placeLabel,
     chapterLabel,
+    hudText: (() => {
+      const hud = speedKmhAt(journey.points, journey.cumulativeDistanceKm, frame.journeyProgress);
+      return `${Math.round(hud.distanceKm)} km · ${Math.round(hud.speedKmh)} km/h`;
+    })(),
   });
   const scrubber = document.getElementById('preview-scrubber') as HTMLInputElement | null;
   if (scrubber) scrubber.value = String(Math.round(progress01 * 1000));
@@ -864,10 +873,16 @@ previewButton.addEventListener('click', async () => {
         ...currentStyle(),
         placeLabel,
         chapterLabel,
+        hudText: (() => {
+          const hud = speedKmhAt(journey.points, journey.cumulativeDistanceKm, frame.journeyProgress);
+          return `${Math.round(hud.distanceKm)} km · ${Math.round(hud.speedKmh)} km/h`;
+        })(),
       });
       progressLabel.textContent = fraction < 1
         ? (locale === 'en' ? `Previewing ${speed}x` : `預覽中 ${speed}x`)
         : (locale === 'en' ? 'Preview complete' : '預覽完成');
+      const live = document.getElementById('a11y-live');
+      if (live && Math.round(fraction * 20) % 5 === 0) live.textContent = progressLabel.textContent;
       if (fraction < 1) previewAnimation = requestAnimationFrame(tick);
     };
     previewAnimation = requestAnimationFrame(tick);
@@ -1004,7 +1019,21 @@ async function runExportOnce(): Promise<void> {
     }
     const journey = prepared;
     noteEncodeOk();
+    saveSuccessSettings({
+      formatId: formatSelect.value,
+      themeId: themeSelect.value,
+      duration: durationSelect.value,
+      camera: cameraMovementSelect.value,
+    });
+    pushQualityRow({
+      at: Date.now(),
+      ok: true,
+      formatId: formatSelect.value,
+      durationSec: Number(durationSelect.value),
+      encodeMs: performance.now() - startedAt,
+    });
     snapshotStats(journey?.points ?? currentPoints(), locale);
+    (window as unknown as { __tvRefreshV15?: () => void }).__tvRefreshV15?.();
     if (resultUrl) URL.revokeObjectURL(resultUrl);
     resultUrl = URL.createObjectURL(blob);
     resultFile = new File([blob], 'timeline-journey.mp4', { type: 'video/mp4' });
@@ -1061,6 +1090,14 @@ async function runExportOnce(): Promise<void> {
       etaLabel.textContent = '';
     } else {
       noteEncodeFail();
+      pushQualityRow({
+        at: Date.now(),
+        ok: false,
+        formatId: formatSelect.value,
+        durationSec: Number(durationSelect.value),
+        encodeMs: performance.now() - startedAt,
+        message: error instanceof Error ? error.message.slice(0, 80) : 'fail',
+      });
       showClassifiedError(error, uiLocale(locale), setError, errorHint);
       progressLabel.textContent = isEnglishLike() ? 'Could not create video' : '無法產出影片';
     }
@@ -1373,7 +1410,46 @@ v14Host = {
 wireV14(v14Host);
 document.getElementById('chapter-select')?.addEventListener('change', () => refreshChapterToc(v14Host));
 
-['map-style-select', 'marker-style-select', 'chapter-select', 'preview-speed-select', 'privacy-blur-toggle', 'compare-toggle', 'compare-year-input', 'activity-pace-toggle', 'burn-captions-toggle', 'auto-fallback-toggle']
+wireV15({
+  locale: () => locale,
+  currentPoints,
+  prepared: () => prepared,
+  cumulativeFor: (points) => cumulativeDistances(points),
+  updateSelection,
+  setPreviewProgress: (value) => { void renderPreviewAt(value); },
+  applyClipRange: (startDate, endDate, durationSec) => {
+    exactDateToggle.checked = true;
+    exactDateToggle.dispatchEvent(new Event('change'));
+    startDateInput.value = startDate;
+    endDateInput.value = endDate;
+    const duration = String(durationSec);
+    if ([...durationSelect.options].some((option) => option.value === duration)) {
+      durationSelect.value = duration;
+    }
+    updateSelection();
+  },
+  getTitle: () => titleInput.value.trim() || (isEnglishLike() ? 'My Journey' : '我的旅程'),
+  getPeriodLabel: currentPeriodLabel,
+  chapterMode,
+  mapConsent: () => mapConsent.checked,
+  encodingSupported: () => encodingSupported,
+  formatId: () => formatSelect.value,
+  readMapStyle,
+  getResultFile: () => resultFile,
+  announce: (text) => {
+    const live = document.getElementById('a11y-live');
+    if (live) live.textContent = text;
+  },
+});
+
+document.addEventListener('visibilitychange', () => {
+  // Keep encode running in background tabs; re-request wake lock when visible again.
+  if (document.visibilityState === 'visible' && isExporting) {
+    void requestWakeLock();
+  }
+});
+
+['map-style-select', 'marker-style-select', 'chapter-select', 'preview-speed-select', 'privacy-blur-toggle', 'compare-toggle', 'compare-year-input', 'activity-pace-toggle', 'burn-captions-toggle', 'auto-fallback-toggle', 'show-attribution-toggle']
   .forEach((id) => {
     document.getElementById(id)?.addEventListener('change', updateSelection);
   });

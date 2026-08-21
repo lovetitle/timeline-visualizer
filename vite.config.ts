@@ -14,6 +14,8 @@ export default defineConfig({
         stats: 'stats.html',
         terms: 'terms.html',
         legalPrivacy: 'legal-privacy.html',
+        share: 'share.html',
+        quality: 'quality.html',
       },
     },
   },

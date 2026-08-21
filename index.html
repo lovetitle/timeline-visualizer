@@ -39,6 +39,7 @@
               <a href="./faq.html" data-i18n="faqLink">常見問題</a>
               <a href="./privacy.html" data-i18n="privacyLink">隱私報告</a>
               <a href="./stats.html" data-i18n="statsLink">旅程統計</a>
+              <a href="./quality.html" data-i18n="qualityLink">品質儀表板</a>
               <a href="./terms.html" data-i18n="termsLink">使用條款</a>
             </p>
             <p class="shortcut-hint muted" data-i18n="shortcutHint">快捷鍵：空白鍵預覽 · Enter 產出</p>
@@ -413,7 +414,13 @@
           <details class="settings-section" open>
             <summary data-i18n="sectionExport">產出與匯出</summary>
             <div class="settings-section-body">
-          <div class="privacy-notice">
+          <ul id="export-checklist" class="export-checklist" aria-label="產出檢查清單"></ul>
+          <label class="checkbox-row" for="show-attribution-toggle">
+            <input id="show-attribution-toggle" type="checkbox" checked />
+            <span data-i18n="showAttribution">片尾顯示地圖版權</span>
+          </label>
+          <button id="prefetch-tiles-button" class="ghost" type="button" data-i18n="prefetchTiles">預先快取目前圖磚</button>
+<div class="privacy-notice">
             <strong data-i18n="privacyNoticeTitle">載入地圖前請確認</strong>
             <p data-i18n="privacyNoticeBody">時間軸檔案不會上傳。CARTO 會收到所選旅程範圍的地圖圖磚座標，以及 IP 等一般網路資訊，可能讓圖磚供應商得知你去過的地區。</p>
             <label class="checkbox-row">
@@ -448,7 +455,24 @@
             <span data-i18n="scrubberLabel">預覽進度</span>
             <input id="preview-scrubber" type="range" min="0" max="1000" value="0" />
           </label>
-          <ul id="chapter-toc" class="chapter-toc" aria-label="章節目錄"></ul>
+          <div class="v15-tools">
+          <div class="section-heading"><h3 data-i18n="smartClips">智慧剪輯建議</h3>
+            <button id="refresh-clips-button" class="ghost" type="button" data-i18n="refreshClips">重新分析</button>
+          </div>
+          <ul id="smart-clips-list" class="clip-list" aria-label="智慧剪輯"></ul>
+          <h3 data-i18n="storyboard">故事板佇列</h3>
+          <ul id="storyboard-list" class="clip-list" aria-label="故事板"></ul>
+          <label>
+            <span data-i18n="narrativeScript">敘事腳本</span>
+            <textarea id="narrative-text" rows="5" readonly></textarea>
+          </label>
+          <div class="actions">
+            <button id="copy-narrative-button" class="secondary" type="button" data-i18n="copyNarrative">複製腳本</button>
+            <button id="speak-narrative-button" class="secondary" type="button" data-i18n="speakNarrative">朗讀</button>
+            <button id="stop-narrative-button" class="ghost" type="button" data-i18n="stopNarrative">停止朗讀</button>
+          </div>
+        </div>
+<ul id="chapter-toc" class="chapter-toc" aria-label="章節目錄"></ul>
           <canvas id="journey-canvas" width="480" height="480"></canvas>
           <progress id="export-progress" class="hidden" value="0" max="1"></progress>
           <button id="pause-button" class="secondary cancel-button hidden" type="button" data-i18n="pauseEncode">暫停產出</button>
@@ -469,6 +493,7 @@
             </label>
             <button id="download-srt-button" class="secondary" type="button" data-i18n="downloadSrt">下載章節 SRT</button>
             <button id="another-round-button" class="secondary" type="button" data-i18n="anotherRound">再開一輪（保留設定）</button>
+            <button id="local-share-button" class="secondary" type="button" data-i18n="localShare">本機分享連結</button>
           </div>
           <div id="share-card" class="share-card hidden">
             <h3 id="share-card-title">分享卡片</h3>
@@ -495,6 +520,8 @@
           ·
           <a href="./stats.html" data-i18n="statsLink">旅程統計</a>
           ·
+          <a href="./quality.html" data-i18n="qualityLink">品質儀表板</a>
+          ·
           <a href="./terms.html" data-i18n="termsLink">使用條款</a>
           ·
           <a href="./legal-privacy.html" data-i18n="legalPrivacyLink">隱私政策</a>
@@ -505,6 +532,8 @@
         <p id="visit-count" class="muted"></p>
         <p id="perf-label" class="muted"></p>
         <p id="anon-stats-label" class="muted"></p>
+        <p id="quality-summary-label" class="muted"></p>
+        <p id="a11y-live" class="sr-only" aria-live="polite"></p>
         <p id="version-label" class="muted"></p>
       </footer>
     </div>

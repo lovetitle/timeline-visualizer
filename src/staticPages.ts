@@ -1,4 +1,5 @@
 import { t, type Locale } from './i18n';
+import { renderChangelog } from './changelog';
 
 function parseLocale(value: string | null): Locale {
   if (value === 'en' || value === 'ja' || value === 'ko') return value;
@@ -14,24 +15,13 @@ const pages = {
       title: '更新公告 · 時間軸視覺化',
       back: '← 回到工具',
       heading: '更新公告',
-      lede: '本站在瀏覽器本機處理你的時間軸，不會上傳 Timeline 檔案。',
-      latest: '最新版本',
-      items: [
-        'v1.4.0：失敗自動降解析度、系統主題、手機底部操作列、快速預設檔',
-        '旅程統計頁、預覽進度／章節目錄、對照透明度、9:16 故事海報、字幕燒錄',
-        '離線圖磚匯出匯入、教學手機畫面動畫、正式條款／隱私政策、匿名本機用量',
-        '無障礙 focus 強化、大型 JSON Worker 解析門檻調低、E2E 涵蓋產出流程',
-        '支援 JSON／GPX／KML、多段合併、智慧選段與旅程模板',
-        '解析度、主題、地圖風格、標記樣式、長途壓縮、離群點過濾',
-        '地名字幕、章節標記、隱私模糊、片尾與本機 BGM',
-        '批次產出、年份對比、雙檔對照、匯出 GPX／GeoJSON／SRT、分享卡與熱力圖海報',
-        '1080p 使用 H.264 Level 4.0+ 編碼，避免「瀏覽器不能編碼」',
-      ],
+      lede: '本站在瀏覽器本機處理你的時間軸，不會上傳 Timeline 檔案。以下依版本由新到舊列出；繁中／英／日／韓各有獨立文案，且每次更新都會保留舊版內容。',
+      latest: '版本紀錄',
       data: '資料說明',
       dataItems: [
         '定位檔只在你的裝置處理',
         '地圖圖磚會向 CARTO 請求（可能透露選取範圍）',
-        '造訪次數僅存本機 localStorage',
+        '造訪次數、設定、品質紀錄僅存本機',
       ],
       faq: '常見問題',
       start: '開始使用',
@@ -40,23 +30,13 @@ const pages = {
       title: 'Updates · Timeline Visualizer',
       back: '← Back to tool',
       heading: 'Updates',
-      lede: 'Your Timeline is processed on-device in the browser and never uploaded.',
-      latest: 'Latest',
-      items: [
-        'v1.4.0: auto resolution fallback, system theme, mobile action bar, presets',
-        'Stats page, preview scrubber/chapter TOC, compare opacity, story poster, burn-in captions',
-        'Offline tile pack, tutorial phone animation, terms/privacy, local anon usage counters',
-        'JSON / GPX / KML, merge journeys, smart select, templates',
-        'Resolutions, themes, map styles, markers, compression, outlier filter',
-        'Place labels, chapters, privacy blur, outro hold, local BGM',
-        'Batch export, year compare, dual-file overlay, GPX/GeoJSON/SRT, share card & heatmap',
-        '1080p uses H.264 Level 4.0+ so encoding no longer fails on HD',
-      ],
+      lede: 'Your Timeline is processed on-device and never uploaded. Versions are listed newest-first; each language has its own copy, and every release keeps prior history.',
+      latest: 'Version history',
       data: 'Data notes',
       dataItems: [
         'Location files stay on your device',
         'Map tiles are requested from CARTO (may reveal selected area)',
-        'Visit counts are stored only in localStorage',
+        'Visits, settings, and quality logs stay local',
       ],
       faq: 'FAQ',
       start: 'Get started',
@@ -65,23 +45,13 @@ const pages = {
       title: '更新情報 · タイムライン可視化',
       back: '← ツールに戻る',
       heading: '更新情報',
-      lede: 'タイムラインはブラウザ内で処理され、アップロードされません。',
-      latest: '最新版',
-      items: [
-        'JSON / GPX / KML、結合、スマート選択、テンプレート',
-        '解像度・テーマ・地図・マーカー・圧縮・外れ値フィルタ',
-        '地名字幕、章、プライバシーぼかし、エンディング、端末内 BGM',
-        'バッチ、年比較、2ファイル重ね、GPX/GeoJSON/SRT、共有カード＆ヒートマップ',
-        '間引き、タイル／エンコード再試行、ETA、プレビュー速度、移動テンポ',
-        'ダークモード、設定の入出力、ショートカット、PWA 更新、zh/en/ja/ko',
-        'プライバシー報告、バージョン表示、端末内パフォーマンス（v1.2.0）',
-        '1080p は H.264 Level 4.0+ でエンコードし失敗を回避',
-      ],
+      lede: 'タイムラインは端末内で処理され、アップロードされません。新しい版から順に掲載。言語ごとに文言を分け、過去の更新も残します。',
+      latest: 'バージョン履歴',
       data: 'データの扱い',
       dataItems: [
         '位置ファイルは端末内のみ',
         '地図タイルは CARTO へ（選択範囲が分かる可能性）',
-        '訪問回数は localStorage のみ',
+        '訪問・設定・品質記録は端末内のみ',
       ],
       faq: 'よくある質問',
       start: 'はじめる',
@@ -90,23 +60,13 @@ const pages = {
       title: '업데이트 · 타임라인 시각화',
       back: '← 도구로 돌아가기',
       heading: '업데이트',
-      lede: '타임라인은 브라우저에서만 처리되며 업로드되지 않습니다.',
-      latest: '최신',
-      items: [
-        'JSON / GPX / KML, 병합, 스마트 선택, 템플릿',
-        '해상도, 테마, 지도, 마커, 압축, 이상치 필터',
-        '지명 자막, 챕터, 집 흐림, 엔딩, 로컬 BGM',
-        '배치, 연도 비교, 이중 파일, GPX/GeoJSON/SRT, 공유 카드·히트맵',
-        '다운샘플, 타일/인코딩 재시도, ETA, 미리보기 속도, 이동 템포',
-        '다크 모드, 설정 입출력, 단축키, PWA 업데이트, zh/en/ja/ko',
-        '개인정보 보고, 버전 표시, 로컬 성능 통계 (v1.2.0)',
-        '1080p는 H.264 Level 4.0+로 인코딩해 실패를 줄임',
-      ],
+      lede: '타임라인은 기기에서만 처리되며 업로드되지 않습니다. 최신 버전부터 나열하며, 언어별 문구를 따로 두고 이전 기록을 모두 유지합니다.',
+      latest: '버전 기록',
       data: '데이터 안내',
       dataItems: [
         '위치 파일은 기기에만 보관',
         '지도 타일은 CARTO 요청 (선택 범위가 드러날 수 있음)',
-        '방문 횟수는 localStorage에만 저장',
+        '방문·설정·품질 기록은 로컬에만 저장',
       ],
       faq: 'FAQ',
       start: '시작하기',
@@ -251,8 +211,10 @@ export function applyStaticPage(page: keyof typeof pages): void {
     set('i18n-data', u.data);
     set('i18n-faq', u.faq);
     set('i18n-start', u.start);
-    const list = document.getElementById('i18n-items');
-    if (list) list.replaceChildren(...u.items.map((text) => Object.assign(document.createElement('li'), { textContent: text })));
+    const versions = document.getElementById('i18n-versions');
+    if (versions) renderChangelog(locale, versions);
+    const legacy = document.getElementById('i18n-items');
+    if (legacy) legacy.replaceChildren();
     const dataList = document.getElementById('i18n-data-items');
     if (dataList) dataList.replaceChildren(...u.dataItems.map((text) => Object.assign(document.createElement('li'), { textContent: text })));
   }

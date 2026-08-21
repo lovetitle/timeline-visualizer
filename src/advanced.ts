@@ -53,7 +53,9 @@ export function parseJsonInWorker(text: string): Promise<unknown> {
       else reject(new Error(event.data.error ?? 'parse failed'));
     };
     worker.addEventListener('message', onMessage);
-    worker.postMessage({ id, text });
+    // Transfer bytes to avoid keeping a second giant string copy longer than needed.
+    const buffer = new TextEncoder().encode(text).buffer;
+    worker.postMessage({ id, buffer }, [buffer]);
   });
 }
 

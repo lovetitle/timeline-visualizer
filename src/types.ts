@@ -58,6 +58,8 @@ export interface DrawStyle {
   compareWorldPoints?: WorldPoint[];
   compareOpacity?: number;
   burnCaptions?: boolean;
+  showAttribution?: boolean;
+  hudText?: string | null;
 }
 
 export interface PreparedJourney {

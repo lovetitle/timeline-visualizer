@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>品質儀表板 · 時間軸視覺化</title>
+    <link rel="icon" href="./icon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body>
+    <div class="page">
+      <header class="hero">
+        <p class="eyebrow"><a href="./">← 回到工具</a></p>
+        <h1>本機品質儀表板</h1>
+        <p class="lede">只記錄產出成功／失敗與耗時，不上傳時間軸內容。</p>
+      </header>
+      <section class="panel">
+        <p id="quality-summary" class="status"></p>
+        <ul id="quality-list" class="faq-list"></ul>
+      </section>
+    </div>
+    <script type="module">
+      import { loadQualityRows, summarizeQuality } from '/src/qualityDash.ts';
+      const locale = localStorage.getItem('tv-locale') || 'zh';
+      document.getElementById('quality-summary').textContent = summarizeQuality(locale);
+      const list = document.getElementById('quality-list');
+      list.replaceChildren(...loadQualityRows().map((row) => {
+        const li = document.createElement('li');
+        const when = new Date(row.at).toLocaleString();
+        li.textContent = `${when} · ${row.ok ? 'OK' : 'FAIL'} · ${row.formatId} · ${row.durationSec}s · ${Math.round(row.encodeMs / 1000)}s${row.message ? ` · ${row.message}` : ''}`;
+        return li;
+      }));
+    </script>
+  </body>
+</html>

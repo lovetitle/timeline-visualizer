@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>本機分享預覽 · 時間軸視覺化</title>
+    <link rel="icon" href="./icon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body>
+    <div class="page">
+      <header class="hero">
+        <p class="eyebrow"><a href="./">← 回到工具</a></p>
+        <h1>本機分享預覽</h1>
+        <p class="lede">影片只存在這個瀏覽器的 IndexedDB，不會上傳時間軸。連結約 24 小時後失效。</p>
+      </header>
+      <section class="panel">
+        <p id="share-status" class="status">載入中…</p>
+        <h2 id="share-title"></h2>
+        <p id="share-meta" class="muted"></p>
+        <video id="share-video" class="hidden" controls playsinline></video>
+      </section>
+    </div>
+    <script type="module">
+      import { loadLocalSharePreview } from '/src/shareLocal.ts';
+      const status = document.getElementById('share-status');
+      const video = document.getElementById('share-video');
+      const title = document.getElementById('share-title');
+      const meta = document.getElementById('share-meta');
+      const id = new URLSearchParams(location.search).get('id');
+      if (!id) {
+        status.textContent = '缺少分享編號。';
+      } else {
+        const row = await loadLocalSharePreview(id);
+        if (!row) {
+          status.textContent = '找不到預覽或已過期（需同一瀏覽器）。';
+        } else {
+          status.textContent = '已載入本機預覽。';
+          title.textContent = row.meta.title;
+          meta.textContent = row.meta.period;
+          video.src = URL.createObjectURL(row.blob);
+          video.classList.remove('hidden');
+        }
+      }
+    </script>
+  </body>
+</html>

@@ -1061,3 +1061,25 @@ body.is-exporting .preview-panel {
   margin: 8px 0 12px;
 }
 .date-scrubbers input[type='range'] { width: 100%; }
+
+/* v1.5 */
+.changelog-version { margin: 0 0 22px; }
+.changelog-version h3 { margin: 0 0 8px; font-size: 1.05rem; }
+.v15-tools { margin: 0 0 14px; display: grid; gap: 8px; }
+.clip-list { list-style: none; padding: 0; margin: 0; display: grid; gap: 6px; max-height: 160px; overflow: auto; }
+.clip-list li { display: flex; gap: 6px; align-items: center; }
+.clip-list .ghost { margin: 0; flex: 1; }
+.export-checklist { list-style: none; padding: 0; margin: 0 0 12px; display: grid; gap: 4px; }
+.export-checklist .check-ok { color: #2f6b4f; }
+.export-checklist .check-bad { color: #a33b2d; }
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  border: 0;
+}
+#narrative-text { width: 100%; min-height: 96px; resize: vertical; }

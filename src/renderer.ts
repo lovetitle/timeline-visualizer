@@ -439,8 +439,21 @@ export function drawFrame(
     context.fillText(caption, width / 2, boxY + 32 * scale, boxW - 24 * scale);
   }
 
-  context.textAlign = 'right';
-  context.fillStyle = 'rgba(36, 25, 29, 0.78)';
-  context.font = `${13 * scale}px "Segoe UI", "PingFang TC", "Noto Sans TC", sans-serif`;
-  context.fillText('© OpenStreetMap contributors  © CARTO', width - 12 * scale, height - 12 * scale);
+  if (style.hudText) {
+    context.textAlign = 'left';
+    context.fillStyle = 'rgba(28,42,36,0.72)';
+    context.beginPath();
+    context.roundRect(16 * scale, height - 52 * scale, Math.min(width * 0.55, 280 * scale), 36 * scale, 10 * scale);
+    context.fill();
+    context.fillStyle = '#f6f3ee';
+    context.font = `650 ${16 * scale}px "Segoe UI", "PingFang TC", "Noto Sans TC", sans-serif`;
+    context.fillText(style.hudText, 28 * scale, height - 28 * scale, width * 0.5);
+  }
+
+  if (style.showAttribution !== false) {
+    context.textAlign = 'right';
+    context.fillStyle = 'rgba(36, 25, 29, 0.78)';
+    context.font = `${13 * scale}px "Segoe UI", "PingFang TC", "Noto Sans TC", sans-serif`;
+    context.fillText('© OpenStreetMap contributors  © CARTO', width - 12 * scale, height - 12 * scale);
+  }
 }
