@@ -9,6 +9,36 @@ export interface ChangelogVersion {
 /** Newest first. Each locale keeps its own wording; older releases stay listed. */
 export const CHANGELOG: ChangelogVersion[] = [
   {
+    version: '1.5.1',
+    date: '2026-08-21',
+    items: {
+      zh: [
+        '地圖圖磚依介面語系切換：繁中／韓文用 OSM 本地地名、日文用 OSM Japan、英文維持 CARTO',
+        '深色地圖改無標籤底圖，避免英文路名蓋過介面字幕',
+        '修正「短影音／環島／出差預設」與「今年／最近／海外／裁切」按鈕未真正套用的問題',
+        '預設與智慧選取會寫入標題、章節、地標等，並在選取摘要顯示已套用結果',
+      ],
+      en: [
+        'Map tiles follow UI language: zh/ko use OSM local names, ja uses OSM Japan, en keeps CARTO',
+        'Dark map uses unlabeled basemap so English street names do not override UI captions',
+        'Fixed Reels / Island / Business presets and This-year / Recent / Abroad / Trim buttons not applying',
+        'Presets and smart select now update title/chapters/labels and show a clear “applied” summary',
+      ],
+      ja: [
+        '地図タイルが UI 言語に追従：zh/ko は OSM 現地表記、ja は OSM Japan、en は CARTO',
+        'ダーク地図はラベルなし基図にし、英語地名が字幕を邪魔しないように',
+        'リール／島めぐり／出張プリセットと今年／最近／海外／トリムが効いていなかった不具合を修正',
+        'プリセットとスマート選択がタイトル・章・地名も更新し、適用結果を要約表示',
+      ],
+      ko: [
+        '지도 타일이 UI 언어를 따름: zh/ko는 OSM 현지 지명, ja는 OSM Japan, en은 CARTO',
+        '다크 지도는 라벨 없는 베이스맵으로 영어 지명이 자막을 가리지 않음',
+        '숏폼/섬일주/출장 프리셋과 올해/최근/해외/트림 버튼이 적용되지 않던 문제 수정',
+        '프리셋·스마트 선택이 제목/챕터/지명까지 반영하고 적용 요약을 표시',
+      ],
+    },
+  },
+  {
     version: '1.5.0',
     date: '2026-08-21',
     items: {
