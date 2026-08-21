@@ -9,6 +9,32 @@ export interface ChangelogVersion {
 /** Newest first. Each locale keeps its own wording; older releases stay listed. */
 export const CHANGELOG: ChangelogVersion[] = [
   {
+    version: '1.6.1',
+    date: '2026-08-21',
+    items: {
+      zh: [
+        '補齊 v1.5／v1.6 介面與動態提示的繁中／英／日／韓文案（含精華、健康檢查、色調、匯出按鈕等）',
+        '下拉選項（片長、日光色調等）與年度回顧頁隨語系切換',
+        '城市標籤、章節「旅途中」、智慧選取／狀態列訊息改為四語',
+      ],
+      en: [
+        'Filled missing zh/en/ja/ko strings for v1.5–v1.6 UI and toasts (highlight, health check, grade, export buttons, etc.)',
+        'Select labels (duration, daylight grade, …) and year-wrap page follow the UI language',
+        'City labels, “on the road” chapters, smart-select and status messages now cover all four locales',
+      ],
+      ja: [
+        'v1.5／v1.6 の UI・トーストを繁中／英／日／韓で補完（ハイライト、ヘルス、色調、書き出しボタンなど）',
+        '尺・日光カラーなどセレクトと年間振り返りページが言語に追従',
+        '都市ラベル、「移動中」章、スマート選択／ステータスも四言語対応',
+      ],
+      ko: [
+        'v1.5/v1.6 UI·토스트의 번체/영/일/한 문구 보완(하이라이트, 헬스, 색감, 내보내기 버튼 등)',
+        '길이·일광 색감 등 셀렉트와 연간 리캡 페이지가 UI 언어를 따름',
+        '도시 라벨, “이동 중” 챕터, 스마트 선택/상태 메시지도 4개 언어 지원',
+      ],
+    },
+  },
+  {
     version: '1.6.0',
     date: '2026-08-21',
     items: {

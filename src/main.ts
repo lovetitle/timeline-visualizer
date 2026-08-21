@@ -27,7 +27,7 @@ import { applyGuideLocale } from './guideI18n';
 import { drawHeatmapPoster } from './heatmap';
 import { t, type Locale } from './i18n';
 import { detectImportKind, parseGpx, parseKml } from './importFormats';
-import { intlLocale, uiLocale } from './localeUtil';
+import { intlLocale, L, uiLocale } from './localeUtil';
 import { filterLocationOutliers, type LocationFilterMode } from './outlier';
 import { recordEncodePerf } from './perf';
 import { placeLabelAtProgress } from './places';
@@ -207,8 +207,8 @@ function activityPaceEnabled(): boolean {
   return Boolean((document.getElementById('activity-pace-toggle') as HTMLInputElement | null)?.checked);
 }
 
-function isEnglishLike(): boolean {
-  return locale === 'en';
+function tx(zh: string, en: string, ja: string, ko: string): string {
+  return L(locale, zh, en, ja, ko);
 }
 
 function applyI18n(): void {
@@ -223,6 +223,10 @@ function applyI18n(): void {
     if (key === 'brandTitle') node.innerHTML = text.replaceAll('\n', '<br />');
     else node.textContent = text;
   });
+  document.querySelectorAll<HTMLInputElement>('[data-i18n-placeholder]').forEach((node) => {
+    const key = node.dataset.i18nPlaceholder as Parameters<typeof t>[1];
+    if (key) node.placeholder = t(locale, key);
+  });
   applyGuideLocale(locale);
   applySelectLocale(locale);
   versionLabel.textContent = `${t(locale, 'versionLabel')} ${APP_VERSION}`;
@@ -236,15 +240,15 @@ function localizeError(error: unknown, fallback: string): string {
   if (error instanceof TimelineParseError) {
     switch (error.reason) {
       case 'malformed-json':
-        return isEnglishLike() ? 'This is not valid JSON.' : '這不是有效或完整的 JSON 檔。';
+        return L(locale, '這不是有效或完整的 JSON 檔。', 'This is not valid JSON.', '有効な JSON ではありません。', '유효한 JSON이 아닙니다.');
       case 'legacy-format':
-        return isEnglishLike() ? 'Legacy Takeout format. Export from your phone instead.' : '這是較舊的 Google Takeout 格式。請改從手機匯出時間軸資料。';
+        return L(locale, '這是較舊的 Google Takeout 格式。請改從手機匯出時間軸資料。', 'Legacy Takeout format. Export from your phone instead.', '古い Takeout 形式です。スマホから書き出してください。', '구형 Takeout 형식입니다. 휴대폰에서 내보내세요.');
       case 'raw-signals-only':
-        return isEnglishLike() ? 'Only raw signals found.' : '這個匯出檔只有原始定位，沒有已整理的旅程。';
+        return L(locale, '這個匯出檔只有原始定位，沒有已整理的旅程。', 'Only raw signals found.', '生の位置信号のみで整理済みの旅がありません。', '원시 신호만 있고 정리된 여정이 없습니다.');
       case 'unsupported-format':
-        return isEnglishLike() ? 'Unsupported Timeline JSON.' : '時間軸 JSON 必須是陣列，或包含 semanticSegments。';
+        return L(locale, '時間軸 JSON 必須是陣列，或包含 semanticSegments。', 'Unsupported Timeline JSON.', 'タイムライン JSON は配列か semanticSegments が必要です。', '타임라인 JSON은 배열이거나 semanticSegments가 필요합니다.');
       case 'no-usable-locations':
-        return isEnglishLike() ? 'No usable location points.' : '這個時間軸匯出檔沒有可用的定位點。';
+        return L(locale, '這個時間軸匯出檔沒有可用的定位點。', 'No usable location points.', '使える位置ポイントがありません。', '사용 가능한 위치 포인트가 없습니다.');
     }
   }
   if (error instanceof Error && error.message) return error.message;
@@ -282,7 +286,7 @@ function rebuildRawSignalProcessing(): boolean {
   const trimmed = rawAccuracyLimit.value.trim();
   const limit = trimmed === '' ? null : Number(trimmed);
   if (limit !== null && (!Number.isFinite(limit) || limit < 0)) {
-    setSettingsError(locale === 'en' ? 'Enter a non-negative accuracy limit.' : '請輸入大於或等於 0 的準確度上限，或留空。');
+    setSettingsError(L(locale, '請輸入大於或等於 0 的準確度上限，或留空。', 'Enter a non-negative accuracy limit.', '0以上の精度上限を入力するか空欄にしてください。', '0 이상 정확도 상한을 입력하거나 비워 두세요.'));
     return false;
   }
   rawSignalProcessing = processRawSignals(rawSignalPoints, limit);
@@ -316,7 +320,7 @@ function formatInputDate(value: string): string {
 
 function currentPeriodLabel(): string {
   if (mergeLabels.length > 1) return mergeLabels.join(' + ');
-  if (rawSignalsToggle.checked) return locale === 'en' ? 'Raw location data' : '原始定位資料';
+  if (rawSignalsToggle.checked) return L(locale, '原始定位資料', 'Raw location data', '生の位置データ', '원시 위치 데이터');
   if (exactDateToggle.checked) {
     const start = formatInputDate(startDateInput.value);
     const end = formatInputDate(endDateInput.value);
@@ -373,9 +377,12 @@ async function refreshEncodingSupport(): Promise<void> {
   if (supported) {
     compatibilityStatus.textContent = t(locale, 'videoOk');
   } else {
-    compatibilityStatus.textContent = isEnglishLike()
-      ? `This browser cannot encode ${format.width}×${format.height}. Try 720p or 480p.`
-      : `此瀏覽器無法編碼 ${format.width}×${format.height}。請改選 720p 或 480p。`;
+    compatibilityStatus.textContent = tx(
+      `此瀏覽器無法編碼 ${format.width}×${format.height}。請改選 720p 或 480p。`,
+      `This browser cannot encode ${format.width}×${format.height}. Try 720p or 480p.`,
+      `このブラウザでは ${format.width}×${format.height} をエンコードできません。720p／480p を試してください。`,
+      `이 브라우저는 ${format.width}×${format.height}를 인코딩할 수 없습니다. 720p/480p를 시도하세요.`,
+    );
   }
   refreshActionAvailability();
 }
@@ -389,15 +396,21 @@ function refreshActionAvailability(points = currentPoints()): void {
   if (mobilePreview) mobilePreview.disabled = previewButton.disabled;
   if (mobileCreate) mobileCreate.disabled = createButton.disabled;
   if (!compatibilityChecked) {
-    createButton.title = locale === 'en' ? 'Checking video support.' : '正在檢查瀏覽器的影片支援。';
+    createButton.title = L(locale, '正在檢查瀏覽器的影片支援。', 'Checking video support.', 'ブラウザの動画対応を確認中。', '브라우저 영상 지원을 확인 중.');
   } else if (!encodingSupported) {
-    createButton.title = locale === 'en'
-      ? 'MP4 needs WebCodecs and H.264.'
-      : '產出 MP4 需要支援 WebCodecs 與 H.264 的瀏覽器。';
+    createButton.title = L(locale,
+      '產出 MP4 需要支援 WebCodecs 與 H.264 的瀏覽器。',
+      'MP4 needs WebCodecs and H.264.',
+      'MP4 には WebCodecs と H.264 対応ブラウザが必要です。',
+      'MP4는 WebCodecs와 H.264를 지원하는 브라우저가 필요합니다.',
+    );
   } else if (!hasJourney) {
-    createButton.title = locale === 'en'
-      ? 'Select a period with movement.'
-      : '請選擇至少包含兩個不同地點的期間。';
+    createButton.title = L(locale,
+      '請選擇至少包含兩個不同地點的期間。',
+      'Select a period with movement.',
+      '移動がある期間を選んでください。',
+      '이동이 있는 기간을 선택하세요.',
+    );
   } else {
     createButton.removeAttribute('title');
   }
@@ -437,20 +450,31 @@ function updateSelection(): void {
   const distanceKm = selectedDistanceKm(points);
   emptyTimelineBanner.classList.toggle('hidden', allPoints.length >= 5);
   if (points.length === 0) {
-    selectionSummary.textContent = locale === 'en' ? 'No locations in this period' : '這段期間沒有定位點';
+    selectionSummary.textContent = L(locale, '這段期間沒有定位點', 'No locations in this period', 'この期間に位置情報がありません', '이 기간에 위치 포인트가 없습니다');
   } else if (points.length === 1 || distanceKm <= 0) {
-    selectionSummary.textContent = locale === 'en'
-      ? 'Not enough movement — widen the period'
-      : '移動不足 · 請擴大期間';
+    selectionSummary.textContent = L(locale,
+      '移動不足 · 請擴大期間',
+      'Not enough movement — widen the period',
+      '移動が足りません · 期間を広げてください',
+      '이동이 부족합니다 · 기간을 넓히세요',
+    );
   } else {
     const ignored = outlierRemoved > 0
-      ? (locale === 'en'
-        ? ` · ${outlierRemoved} outliers ignored`
-        : ` · 已忽略 ${outlierRemoved} 個離群點`)
+      ? L(locale,
+        ` · 已忽略 ${outlierRemoved} 個離群點`,
+        ` · ${outlierRemoved} outliers ignored`,
+        ` · 外れ値 ${outlierRemoved} 件を無視`,
+        ` · 이상치 ${outlierRemoved}개 무시`,
+      )
       : '';
-    selectionSummary.textContent = locale === 'en'
-      ? `${points.length.toLocaleString()} points · ~${Math.round(distanceKm).toLocaleString()} km${ignored}`
-      : `${points.length.toLocaleString('zh-Hant-TW')} 個定位點 · 約 ${Math.round(distanceKm).toLocaleString('zh-Hant-TW')} 公里${ignored}`;
+    const count = points.length.toLocaleString(intlLocale(locale));
+    const km = Math.round(distanceKm).toLocaleString(intlLocale(locale));
+    selectionSummary.textContent = L(locale,
+      `${count} 個定位點 · 約 ${km} 公里${ignored}`,
+      `${count} points · ~${km} km${ignored}`,
+      `${count} 点 · 約 ${km} km${ignored}`,
+      `${count}개 포인트 · 약 ${km} km${ignored}`,
+    );
   }
   prepared = null;
   selectedSignature = '';
@@ -471,7 +495,7 @@ async function getPreparedJourney(signal?: AbortSignal): Promise<PreparedJourney
   const signature = currentRangeSignature();
   if (prepared && signature === selectedSignature) return prepared;
   if (signal?.aborted) throw new DOMException('已取消產出影片。', 'AbortError');
-  progressLabel.textContent = locale === 'en' ? 'Preparing map' : '正在準備地圖';
+  progressLabel.textContent = L(locale, '正在準備地圖', 'Preparing map', '地図を準備中', '지도를 준비 중');
   const format = formatById(formatSelect.value);
   const nextJourney = await prepareJourney(
     currentPoints(),
@@ -483,9 +507,12 @@ async function getPreparedJourney(signal?: AbortSignal): Promise<PreparedJourney
     readMapStyle(),
     signal,
     (completed, total) => {
-      progressLabel.textContent = isEnglishLike()
-        ? `Preparing map ${completed}/${total}`
-        : `正在準備地圖 ${completed}/${total}`;
+      progressLabel.textContent = tx(
+        `正在準備地圖 ${completed}/${total}`,
+        `Preparing map ${completed}/${total}`,
+        `地図を準備中 ${completed}/${total}`,
+        `지도 준비 중 ${completed}/${total}`,
+      );
     },
     activityPaceEnabled(),
     locale,
@@ -497,9 +524,12 @@ async function getPreparedJourney(signal?: AbortSignal): Promise<PreparedJourney
 
 function requireMapConsent(): boolean {
   if (mapConsent.checked) return true;
-  setSettingsError(locale === 'en'
-    ? 'Confirm the map privacy notice first.'
-    : '請先確認地圖隱私說明，才會載入地圖圖磚。');
+  setSettingsError(L(locale,
+    '請先確認地圖隱私說明，才會載入地圖圖磚。',
+    'Confirm the map privacy notice first.',
+    '先に地図のプライバシー説明に同意してください。',
+    '먼저 지도 개인정보 안내에 동의해 주세요.',
+  ));
   mapConsent.focus();
   return false;
 }
@@ -513,9 +543,12 @@ function parseTimelineText(text: string): Promise<unknown> {
 function applyPoints(points: GeoPoint[], sourceName: string, append: boolean): void {
   const capped = downsamplePoints(points, suggestMaxPoints());
   downsampleNote = capped.removed > 0
-    ? (isEnglishLike()
-      ? ` · thinned ${capped.removed.toLocaleString()} points for memory`
-      : ` · 為節省記憶體已精簡 ${capped.removed.toLocaleString('zh-Hant-TW')} 點`)
+    ? tx(
+      ` · 為節省記憶體已精簡 ${capped.removed.toLocaleString(intlLocale(locale))} 點`,
+      ` · thinned ${capped.removed.toLocaleString()} points for memory`,
+      ` · メモリ節約のため ${capped.removed.toLocaleString(intlLocale(locale))} 点を間引き`,
+      ` · 메모리 절약을 위해 ${capped.removed.toLocaleString(intlLocale(locale))}개 포인트 축소`,
+    )
     : '';
   const nextPoints = capped.points;
   lastSourceName = sourceName;
@@ -562,9 +595,12 @@ function applyPoints(points: GeoPoint[], sourceName: string, append: boolean): v
   previewCard.classList.add('hidden');
   defaultRecentRange(allPoints);
   renderMergeList();
-  fileStatus.textContent = (isEnglishLike()
-    ? `${sourceName} · ${allPoints.length.toLocaleString()} points`
-    : `${sourceName} · ${allPoints.length.toLocaleString('zh-Hant-TW')} 個有效點`) + downsampleNote;
+  fileStatus.textContent = tx(
+    `${sourceName} · ${allPoints.length.toLocaleString(intlLocale(locale))} 個有效點`,
+    `${sourceName} · ${allPoints.length.toLocaleString()} points`,
+    `${sourceName} · ${allPoints.length.toLocaleString(intlLocale(locale))} 有効点`,
+    `${sourceName} · ${allPoints.length.toLocaleString(intlLocale(locale))}개 유효 포인트`,
+  ) + downsampleNote;
   emptyTimelineBanner.classList.toggle('hidden', allPoints.length >= 5);
   updateSelection();
   pushRecent(sourceName, currentPeriodLabel());
@@ -609,7 +645,7 @@ async function readFileWithProgress(file: File): Promise<string> {
       loadProgress.value = 1;
       resolve(String(reader.result ?? ''));
     };
-    reader.onerror = () => reject(new Error(locale === 'en' ? 'Could not read file.' : '無法讀取檔案。'));
+    reader.onerror = () => reject(new Error(L(locale, '無法讀取檔案。', 'Could not read file.', 'ファイルを読めません。', '파일을 읽을 수 없습니다.')));
     reader.readAsText(file);
   });
 }
@@ -617,7 +653,7 @@ async function readFileWithProgress(file: File): Promise<string> {
 async function loadFile(file: File, append = false): Promise<void> {
   setError(null);
   setSettingsError(null);
-  fileStatus.textContent = locale === 'en' ? `Reading ${file.name}…` : `正在讀取 ${file.name}…`;
+  fileStatus.textContent = L(locale, `正在讀取 ${file.name}…`, `Reading ${file.name}…`, `読み込み中 ${file.name}…`, `읽는 중 ${file.name}…`);
   const kind = detectImportKind(file);
   const text = await readFileWithProgress(file);
   loadProgress.classList.add('hidden');
@@ -636,7 +672,7 @@ async function loadFile(file: File, append = false): Promise<void> {
     const rawPoints = parseRawSignalsJson(data);
     if (!append && error instanceof TimelineParseError && error.reason === 'raw-signals-only' && rawPoints.length > 0) {
       pendingRawOnlyImport = { data, sourceName: file.name };
-      fileStatus.textContent = locale === 'en' ? 'Only raw location data found' : '只找到原始定位資料';
+      fileStatus.textContent = L(locale, '只找到原始定位資料', 'Only raw location data found', '生の位置データのみ見つかりました', '원시 위치 데이터만 있습니다');
       rawOnlyDialog.showModal();
       return;
     }
@@ -753,8 +789,8 @@ fileInput.addEventListener('change', async () => {
     mergeMode = false;
   } catch (error) {
     settingsCard.classList.add('hidden');
-    fileStatus.textContent = locale === 'en' ? 'Could not load Timeline' : '無法載入時間軸';
-    setError(localizeError(error, locale === 'en' ? 'Could not read file.' : '無法讀取所選檔案。'));
+    fileStatus.textContent = L(locale, '無法載入時間軸', 'Could not load Timeline', 'タイムラインを読み込めません', '타임라인을 불러올 수 없습니다');
+    setError(localizeError(error, L(locale, '無法讀取所選檔案。', 'Could not read file.', '選択したファイルを読めません。', '선택한 파일을 읽을 수 없습니다.')));
     previewCard.classList.remove('hidden');
     emptyTimelineBanner.classList.remove('hidden');
   } finally {
@@ -785,20 +821,20 @@ dropZone.addEventListener('drop', async (event) => {
   try {
     await loadFile(file, false);
   } catch (error) {
-    setError(localizeError(error, locale === 'en' ? 'Could not read file.' : '無法讀取所選檔案。'));
+    setError(localizeError(error, L(locale, '無法讀取所選檔案。', 'Could not read file.', '選択したファイルを読めません。', '선택한 파일을 읽을 수 없습니다.')));
     previewCard.classList.remove('hidden');
   }
 });
 
 sampleButton.addEventListener('click', async () => {
   setError(null);
-  fileStatus.textContent = locale === 'en' ? 'Loading sample…' : '正在載入虛構範例…';
+  fileStatus.textContent = L(locale, '正在載入虛構範例…', 'Loading sample…', 'サンプルを読み込み中…', '샘플을 불러오는 중…');
   try {
     const response = await fetch(`${import.meta.env.BASE_URL}sample-timeline.json`);
-    if (!response.ok) throw new Error(locale === 'en' ? 'Sample missing.' : '無法載入虛構範例。');
-    applyTimeline(await parseTimelineText(await response.text()), locale === 'en' ? 'Fictional sample' : '虛構範例');
+    if (!response.ok) throw new Error(L(locale, '無法載入虛構範例。', 'Sample missing.', 'サンプルを読み込めません。', '샘플을 불러올 수 없습니다.'));
+    applyTimeline(await parseTimelineText(await response.text()), L(locale, '虛構範例', 'Fictional sample', '架空サンプル', '가상 샘플'));
   } catch (error) {
-    setError(localizeError(error, locale === 'en' ? 'Sample missing.' : '無法載入虛構範例。'));
+    setError(localizeError(error, L(locale, '無法載入虛構範例。', 'Sample missing.', 'サンプルを読み込めません。', '샘플을 불러올 수 없습니다.')));
     previewCard.classList.remove('hidden');
   }
 });
@@ -839,7 +875,7 @@ bgmFileInput.addEventListener('change', async () => {
     audioBuffer = await decodeBgm(file);
   } catch {
     audioBuffer = null;
-    setSettingsError(locale === 'en' ? 'Could not decode audio file.' : '無法解碼這個音訊檔。');
+    setSettingsError(L(locale, '無法解碼這個音訊檔。', 'Could not decode audio file.', 'この音声ファイルをデコードできません。', '이 오디오 파일을 디코딩할 수 없습니다.'));
   }
 });
 
@@ -877,7 +913,7 @@ continueRawDataButton.addEventListener('click', () => {
   try {
     applyTimeline(pending.data, pending.sourceName, true);
   } catch (error) {
-    setError(localizeError(error, locale === 'en' ? 'Could not read file.' : '無法讀取所選檔案。'));
+    setError(localizeError(error, L(locale, '無法讀取所選檔案。', 'Could not read file.', '選択したファイルを読めません。', '선택한 파일을 읽을 수 없습니다.')));
   }
 });
 
@@ -927,8 +963,8 @@ previewButton.addEventListener('click', async () => {
         stayMarkers: stayMarkersForJourney(journey),
       });
       progressLabel.textContent = fraction < 1
-        ? (locale === 'en' ? `Previewing ${speed}x` : `預覽中 ${speed}x`)
-        : (locale === 'en' ? 'Preview complete' : '預覽完成');
+        ? (L(locale, `預覽中 ${speed}x`, `Previewing ${speed}x`, `プレビュー中 ${speed}x`, `미리보기 중 ${speed}x`))
+        : (L(locale, '預覽完成', 'Preview complete', 'プレビュー完了', '미리보기 완료'));
       const live = document.getElementById('a11y-live');
       if (live && Math.round(fraction * 20) % 5 === 0) live.textContent = progressLabel.textContent;
       localStorage.setItem('tv-onboarding-step', '2');
@@ -939,7 +975,7 @@ previewButton.addEventListener('click', async () => {
     notePreviewOk();
     snapshotStats(journey.points, locale);
   } catch (error) {
-    setError(localizeError(error, locale === 'en' ? 'Preview failed.' : '預覽失敗。'));
+    setError(localizeError(error, L(locale, '預覽失敗。', 'Preview failed.', 'プレビューに失敗しました。', '미리보기에 실패했습니다.')));
   } finally {
     isPreparing = false;
     refreshActionAvailability();
@@ -949,7 +985,7 @@ previewButton.addEventListener('click', async () => {
 cancelButton.addEventListener('click', () => {
   cancelButton.disabled = true;
   pauseGate.paused = false;
-  progressLabel.textContent = isEnglishLike() ? 'Cancelling…' : '正在取消…';
+  progressLabel.textContent = tx('正在取消…', 'Cancelling…', 'キャンセル中…', '취소 중…');
   exportController?.abort();
 });
 
@@ -957,7 +993,7 @@ pauseButton.addEventListener('click', () => {
   pauseGate.paused = !pauseGate.paused;
   pauseButton.textContent = pauseGate.paused ? t(locale, 'resumeEncode') : t(locale, 'pauseEncode');
   if (pauseGate.paused) {
-    progressLabel.textContent = isEnglishLike() ? 'Paused' : '已暫停';
+    progressLabel.textContent = tx('已暫停', 'Paused', '一時停止中', '일시정지됨');
   }
 });
 
@@ -1017,18 +1053,24 @@ async function runExportOnce(): Promise<void> {
         prepared = null;
         selectedSignature = '';
         applyCanvasFormat();
-        progressLabel.textContent = isEnglishLike()
-          ? `Falling back to ${formatId}…`
-          : `改以降級解析度 ${formatId} 重試…`;
+        progressLabel.textContent = tx(
+          `改以降級解析度 ${formatId} 重試…`,
+          `Falling back to ${formatId}…`,
+          `解像度を ${formatId} に下げて再試行…`,
+          `해상도를 ${formatId}로 낮춰 재시도…`,
+        );
       }
       try {
         blob = await withRetry(async (attempt) => {
           if (attempt > 0) {
             prepared = null;
             selectedSignature = '';
-            progressLabel.textContent = isEnglishLike()
-              ? `Retrying encode (${attempt + 1})…`
-              : `正在重試產出（第 ${attempt + 1} 次）…`;
+            progressLabel.textContent = tx(
+              `正在重試產出（第 ${attempt + 1} 次）…`,
+              `Retrying encode (${attempt + 1})…`,
+              `作成を再試行中（${attempt + 1} 回目）…`,
+              `만들기 재시도 중(${attempt + 1}회)…`,
+            );
           }
           const journey = await getPreparedJourney(exportController!.signal);
           const style = currentStyle();
@@ -1038,10 +1080,10 @@ async function runExportOnce(): Promise<void> {
             journey.points,
             Number(durationSelect.value) + Number(outroHoldInput.value || 2.5) + introHoldSeconds(),
           );
-          progressLabel.textContent = isEnglishLike() ? 'Creating MP4' : '正在產出 MP4';
+          progressLabel.textContent = tx('正在產出 MP4', 'Creating MP4', 'MP4 を作成中', 'MP4 만드는 중');
           const makeBlob = async (withAudio: AudioBuffer | null) => createJourneyMp4(canvas, journey, {
             durationSeconds: Number(durationSelect.value),
-            title: titleInput.value.trim() || (isEnglishLike() ? 'My Journey' : '我的旅程'),
+            title: titleInput.value.trim() || (tx('我的旅程', 'My Journey', '私の旅', '나의 여정')),
             periodLabel: currentPeriodLabel(),
             style: {
               ...style,
@@ -1060,9 +1102,12 @@ async function runExportOnce(): Promise<void> {
             onProgress: (fraction) => {
               updateProgress(
                 fraction,
-                isEnglishLike()
-                  ? `Creating MP4 ${Math.round(fraction * 100)}%`
-                  : `正在產出 MP4 ${Math.round(fraction * 100)}%`,
+                tx(
+                  `正在產出 MP4 ${Math.round(fraction * 100)}%`,
+                  `Creating MP4 ${Math.round(fraction * 100)}%`,
+                  `MP4 作成中 ${Math.round(fraction * 100)}%`,
+                  `MP4 만드는 중 ${Math.round(fraction * 100)}%`,
+                ),
               );
             },
           });
@@ -1115,14 +1160,17 @@ async function runExportOnce(): Promise<void> {
     resultVideo.src = resultUrl;
     resultVideo.classList.remove('hidden');
     resultActions.classList.remove('hidden');
-    progressLabel.textContent = isEnglishLike()
-      ? `Video ready · ${(blob.size / 1_000_000).toFixed(1)} MB`
-      : `影片已就緒 · ${(blob.size / 1_000_000).toFixed(1)} MB`;
+    progressLabel.textContent = tx(
+      `影片已就緒 · ${(blob.size / 1_000_000).toFixed(1)} MB`,
+      `Video ready · ${(blob.size / 1_000_000).toFixed(1)} MB`,
+      `動画の準備完了 · ${(blob.size / 1_000_000).toFixed(1)} MB`,
+      `영상 준비됨 · ${(blob.size / 1_000_000).toFixed(1)} MB`,
+    );
     stickyProgressLabel.textContent = progressLabel.textContent;
     etaLabel.textContent = '';
     const distance = Math.round(selectedDistanceKm(journey?.points ?? currentPoints()));
     shareCard.classList.remove('hidden');
-    shareCardTitle.textContent = titleInput.value.trim() || (isEnglishLike() ? 'My Journey' : '我的旅程');
+    shareCardTitle.textContent = titleInput.value.trim() || (tx('我的旅程', 'My Journey', '私の旅', '나의 여정'));
     shareCardMeta.textContent = `${currentPeriodLabel()} · ${distance} km`;
     shareCardCanvas.width = 480;
     shareCardCanvas.height = 480;
@@ -1159,7 +1207,7 @@ async function runExportOnce(): Promise<void> {
     pushRecent(lastSourceName || 'timeline', currentPeriodLabel());
   } catch (error) {
     if (exportController.signal.aborted || (error instanceof DOMException && error.name === 'AbortError')) {
-      progressLabel.textContent = isEnglishLike() ? 'Cancelled' : '已取消產出影片';
+      progressLabel.textContent = tx('已取消產出影片', 'Cancelled', '作成をキャンセルしました', '만들기를 취소했습니다');
       progress.value = 0;
       etaLabel.textContent = '';
     } else {
@@ -1173,7 +1221,7 @@ async function runExportOnce(): Promise<void> {
         message: error instanceof Error ? error.message.slice(0, 80) : 'fail',
       });
       showClassifiedError(error, uiLocale(locale), setError, errorHint);
-      progressLabel.textContent = isEnglishLike() ? 'Could not create video' : '無法產出影片';
+      progressLabel.textContent = tx('無法產出影片', 'Could not create video', '動画を作成できませんでした', '영상을 만들 수 없습니다');
     }
   } finally {
     await wakeLock?.release().catch(() => undefined);
@@ -1195,19 +1243,19 @@ shareButton.addEventListener('click', async () => {
     await navigator.share({ files: [resultFile], title: titleInput.value.trim() || 'Timeline' });
   } catch (error) {
     if (error instanceof DOMException && error.name === 'AbortError') return;
-    setError(locale === 'en' ? 'Share failed. Use download instead.' : '無法開啟分享選單，請改用下載 MP4。');
+    setError(L(locale, '無法開啟分享選單，請改用下載 MP4。', 'Share failed. Use download instead.', '共有メニューを開けません。ダウンロードを使ってください。', '공유 메뉴를 열 수 없습니다. 대신 다운로드하세요.'));
   }
 });
 
 copyLinkButton.addEventListener('click', async () => {
   try {
     await navigator.clipboard.writeText(window.location.href);
-    copyLinkButton.textContent = locale === 'en' ? 'Copied' : '已複製';
+    copyLinkButton.textContent = L(locale, '已複製', 'Copied', 'コピーしました', '복사됨');
     setTimeout(() => {
       copyLinkButton.textContent = t(locale, 'copyLink');
     }, 1500);
   } catch {
-    setError(locale === 'en' ? 'Could not copy link.' : '無法複製連結。');
+    setError(L(locale, '無法複製連結。', 'Could not copy link.', 'リンクをコピーできません。', '링크를 복사할 수 없습니다.'));
   }
 });
 
@@ -1239,7 +1287,7 @@ downloadHeatmapButton.addEventListener('click', () => {
   drawHeatmapPoster(
     heat,
     points,
-    titleInput.value.trim() || (isEnglishLike() ? 'My Journey' : '我的旅程'),
+    titleInput.value.trim() || (tx('我的旅程', 'My Journey', '私の旅', '나의 여정')),
     `${currentPeriodLabel()} · ${Math.round(selectedDistanceKm(points))} km`,
   );
   heat.toBlob((blob) => {
@@ -1279,12 +1327,15 @@ compareFileInput.addEventListener('change', async () => {
     else if (kind === 'kml') points = parseKml(text);
     else points = parseTimelineJson(await parseTimelineText(text));
     overlayComparePoints = downsamplePoints(points, suggestMaxPoints()).points;
-    fileStatus.textContent = isEnglishLike()
-      ? `Compare file loaded · ${overlayComparePoints.length} points`
-      : `已載入對照檔 · ${overlayComparePoints.length.toLocaleString('zh-Hant-TW')} 點`;
+    fileStatus.textContent = tx(
+      `已載入對照檔 · ${overlayComparePoints.length.toLocaleString(intlLocale(locale))} 點`,
+      `Compare file loaded · ${overlayComparePoints.length} points`,
+      `比較ファイルを読み込みました · ${overlayComparePoints.length.toLocaleString(intlLocale(locale))} 点`,
+      `대조 파일 로드됨 · ${overlayComparePoints.length.toLocaleString(intlLocale(locale))}점`,
+    );
     updateSelection();
   } catch (error) {
-    setSettingsError(localizeError(error, isEnglishLike() ? 'Could not read compare file.' : '無法讀取對照檔。'));
+    setSettingsError(localizeError(error, tx('無法讀取對照檔。', 'Could not read compare file.', '比較ファイルを読めません。', '대조 파일을 읽을 수 없습니다.')));
   } finally {
     compareFileInput.value = '';
   }
@@ -1296,7 +1347,7 @@ function anotherRound(): void {
   shareCard.classList.add('hidden');
   setError(null);
   progress.classList.add('hidden');
-  progressLabel.textContent = isEnglishLike() ? 'Ready for another round' : '可再開一輪';
+  progressLabel.textContent = tx('可再開一輪', 'Ready for another round', 'もう一度作成できます', '다시 만들 수 있습니다');
   settingsCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
   startDateInput.focus();
 }
@@ -1316,8 +1367,8 @@ async function startHeroDemo(): Promise<void> {
         heroDemoCanvas,
         journey,
         frame,
-        isEnglishLike() ? 'Sample Journey' : '範例旅程',
-        isEnglishLike() ? 'Demo' : '示範',
+        tx('範例旅程', 'Sample Journey', 'サンプル旅程', '샘플 여정'),
+        tx('示範', 'Demo', 'デモ', '데모'),
         currentStyle(),
       );
       heroAnimation = requestAnimationFrame(loop);
@@ -1359,9 +1410,12 @@ function startTutorialPlayer(): void {
 
 const visits = Number(localStorage.getItem('tv-visits') ?? '0') + 1;
 localStorage.setItem('tv-visits', String(visits));
-visitCount.textContent = isEnglishLike()
-  ? `Local visits on this device: ${visits}`
-  : `此裝置本機造訪次數：${visits}`;
+visitCount.textContent = tx(
+  `此裝置本機造訪次數：${visits}`,
+  `Local visits on this device: ${visits}`,
+  `この端末での訪問回数：${visits}`,
+  `이 기기의 로컬 방문 횟수: ${visits}`,
+);
 
 applyI18n();
 const brand = loadBrand();
@@ -1383,7 +1437,7 @@ playSampleVideoButton.addEventListener('click', async () => {
   try {
     let blob = await getCachedSampleVideo();
     if (!blob) {
-      playSampleVideoButton.textContent = isEnglishLike() ? 'Encoding sample…' : '正在編碼範例…';
+      playSampleVideoButton.textContent = tx('正在編碼範例…', 'Encoding sample…', 'サンプルをエンコード中…', '샘플 인코딩 중…');
       const response = await fetch(`${import.meta.env.BASE_URL}sample-timeline.json`);
       if (!response.ok) throw new Error('sample missing');
       const points = parseTimelineJson(JSON.parse(await response.text()));
@@ -1393,8 +1447,8 @@ playSampleVideoButton.addEventListener('click', async () => {
       const journey = await prepareJourney(points, 480, 480, 'steady', 8, 'balanced', 'light', undefined, undefined, false, locale);
       blob = await createJourneyMp4(offscreen, journey, {
         durationSeconds: 8,
-        title: isEnglishLike() ? 'Sample Journey' : '範例旅程',
-        periodLabel: isEnglishLike() ? 'Demo' : '示範',
+        title: tx('範例旅程', 'Sample Journey', 'サンプル旅程', '샘플 여정'),
+        periodLabel: tx('示範', 'Demo', 'デモ', '데모'),
         style: {
           ...themeById('ember'),
           markerStyle: 'dot',
@@ -1411,7 +1465,7 @@ playSampleVideoButton.addEventListener('click', async () => {
     heroDemoCanvas.classList.add('hidden');
     await sampleResultVideo.play();
   } catch (error) {
-    setError(localizeError(error, isEnglishLike() ? 'Could not play sample video.' : '無法播放範例影片。'));
+    setError(localizeError(error, tx('無法播放範例影片。', 'Could not play sample video.', 'サンプル動画を再生できません。', '샘플 영상을 재생할 수 없습니다.')));
   } finally {
     playSampleVideoButton.disabled = false;
     playSampleVideoButton.textContent = t(locale, 'playSampleVideo');
@@ -1439,7 +1493,7 @@ wireAdvancedControls({
   runExportOnce,
   setError,
   setSettingsError,
-  getTitle: () => titleInput.value.trim() || (isEnglishLike() ? 'My Journey' : '我的旅程'),
+  getTitle: () => titleInput.value.trim() || (tx('我的旅程', 'My Journey', '私の旅', '나의 여정')),
   getPeriodLabel: currentPeriodLabel,
   canvas,
   flashAction: (message) => {
@@ -1473,7 +1527,7 @@ v14Host = {
   create: () => {
     if (!createButton.disabled) createButton.click();
   },
-  getTitle: () => titleInput.value.trim() || (isEnglishLike() ? 'My Journey' : '我的旅程'),
+  getTitle: () => titleInput.value.trim() || (tx('我的旅程', 'My Journey', '私の旅', '나의 여정')),
   getPeriodLabel: currentPeriodLabel,
   selectedDistanceKm,
   readMapStyle,
@@ -1514,7 +1568,7 @@ wireV15({
     }
     updateSelection();
   },
-  getTitle: () => titleInput.value.trim() || (isEnglishLike() ? 'My Journey' : '我的旅程'),
+  getTitle: () => titleInput.value.trim() || (tx('我的旅程', 'My Journey', '私の旅', '나의 여정')),
   getPeriodLabel: currentPeriodLabel,
   chapterMode,
   mapConsent: () => mapConsent.checked,
@@ -1544,7 +1598,7 @@ wireV16({
     updateSelection();
   },
   setPreviewProgress: (value) => { void renderPreviewAt(value); },
-  getTitle: () => titleInput.value.trim() || (isEnglishLike() ? 'My Journey' : '我的旅程'),
+  getTitle: () => titleInput.value.trim() || (tx('我的旅程', 'My Journey', '私の旅', '나의 여정')),
   getPeriodLabel: currentPeriodLabel,
   previewLive: () => {
     if (mapConsent.checked && currentPoints().length >= 2) {
@@ -1588,7 +1642,7 @@ if ('serviceWorker' in navigator) {
       });
       await loadFile(file, false);
     } catch (error) {
-      setError(localizeError(error, isEnglishLike() ? 'Could not open shared file.' : '無法開啟分享進來的檔案。'));
+      setError(localizeError(error, tx('無法開啟分享進來的檔案。', 'Could not open shared file.', '共有ファイルを開けません。', '공유 파일을 열 수 없습니다.')));
       previewCard.classList.remove('hidden');
     }
   });

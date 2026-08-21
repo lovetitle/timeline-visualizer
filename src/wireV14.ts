@@ -42,10 +42,11 @@ export function wireV14(host: V14Host): void {
       node.dispatchEvent(new Event('change', { bubbles: true }));
     }
   };
-  const flash = (zh: string, en: string) => {
+  const flash = (zh: string, en: string, ja?: string, ko?: string) => {
     const summary = document.getElementById('selection-summary');
     const live = document.getElementById('a11y-live');
-    const text = host.locale() === 'en' ? en : zh;
+    const locale = host.locale();
+    const text = locale === 'en' ? en : locale === 'ja' ? (ja ?? en) : locale === 'ko' ? (ko ?? en) : zh;
     if (summary) summary.textContent = text;
     if (live) live.textContent = text;
   };
@@ -59,11 +60,21 @@ export function wireV14(host: V14Host): void {
     setVal('chapter-select', preset.chapter);
     setCheck('place-labels-toggle', preset.placeLabels);
     const title = document.getElementById('video-title') as HTMLInputElement | null;
-    if (title) title.value = host.locale() === 'en' ? preset.titleEn : preset.titleZh;
+    if (title) {
+      title.value = host.locale() === 'en'
+        ? preset.titleEn
+        : host.locale() === 'ja'
+          ? preset.titleZh
+          : host.locale() === 'ko'
+            ? preset.titleZh
+            : preset.titleZh;
+    }
     host.updateSelection();
     flash(
       `已套用預設「${preset.titleZh}」：${preset.formatId} · ${preset.duration}s · ${preset.theme}`,
       `Preset “${preset.titleEn}”: ${preset.formatId} · ${preset.duration}s · ${preset.theme}`,
+      `プリセット「${preset.titleZh}」を適用：${preset.formatId} · ${preset.duration}s · ${preset.theme}`,
+      `프리셋 “${preset.titleZh}” 적용: ${preset.formatId} · ${preset.duration}s · ${preset.theme}`,
     );
   };
 

@@ -1,3 +1,5 @@
+import type { Locale } from './i18n';
+import { L } from './localeUtil';
 import ParseWorker from './parseWorker?worker';
 import { chapterLabelFor } from './chapters';
 import { classifyError } from './errors';
@@ -20,7 +22,7 @@ import type { GeoPoint } from './types';
 export { chapterLabelFor };
 
 export interface AdvancedHost {
-  locale: () => 'zh' | 'en';
+  locale: () => Locale;
   allPoints: () => GeoPoint[];
   setPointsSelection: (points: GeoPoint[]) => void;
   currentPoints: () => GeoPoint[];
@@ -73,17 +75,27 @@ export function compareWorldPoints(points: GeoPoint[]) {
   return unwrapWorldPoints(points.map((point) => project(point.latitude, point.longitude)));
 }
 
-export function formatEta(seconds: number, locale: 'zh' | 'en'): string {
+export function formatEta(seconds: number, locale: Locale): string {
   if (!Number.isFinite(seconds) || seconds <= 0) return '';
-  if (seconds < 60) return locale === 'en' ? `~${Math.ceil(seconds)}s left` : `剩餘約 ${Math.ceil(seconds)} 秒`;
-  return locale === 'en'
-    ? `~${Math.ceil(seconds / 60)}m left`
-    : `剩餘約 ${Math.ceil(seconds / 60)} 分鐘`;
+  if (seconds < 60) {
+    return L(locale,
+      `剩餘約 ${Math.ceil(seconds)} 秒`,
+      `~${Math.ceil(seconds)}s left`,
+      `残り約 ${Math.ceil(seconds)} 秒`,
+      `약 ${Math.ceil(seconds)}초 남음`,
+    );
+  }
+  return L(locale,
+    `剩餘約 ${Math.ceil(seconds / 60)} 分鐘`,
+    `~${Math.ceil(seconds / 60)}m left`,
+    `残り約 ${Math.ceil(seconds / 60)} 分`,
+    `약 ${Math.ceil(seconds / 60)}분 남음`,
+  );
 }
 
 export function showClassifiedError(
   error: unknown,
-  locale: 'zh' | 'en',
+  locale: Locale,
   setError: (message: string | null) => void,
   hintEl: HTMLElement,
 ): void {
@@ -141,15 +153,19 @@ export function wireAdvancedControls(host: AdvancedHost): void {
     document.getElementById('exact-date-fields')?.classList.remove('hidden');
     host.updateSelection();
     const km = Math.round(host.selectedDistanceKm(points));
-    host.flashAction?.(host.locale() === 'en'
-      ? `Applied ${label}: ${points.length} pts · ${km} km · ${bounds.startDate}→${bounds.endDate}`
-      : `已套用「${label}」：${points.length} 點 · ${km} km · ${bounds.startDate}→${bounds.endDate}`);
+    const loc = host.locale();
+    host.flashAction?.(L(loc,
+      `已套用「${label}」：${points.length} 點 · ${km} km · ${bounds.startDate}→${bounds.endDate}`,
+      `Applied ${label}: ${points.length} pts · ${km} km · ${bounds.startDate}→${bounds.endDate}`,
+      `「${label}」を適用：${points.length} 点 · ${km} km · ${bounds.startDate}→${bounds.endDate}`,
+      `「${label}」적용: ${points.length}점 · ${km} km · ${bounds.startDate}→${bounds.endDate}`,
+    ));
   }
 
-  smartThisYear.addEventListener('click', () => applySmart(selectThisYear(host.allPoints()), host.locale() === 'en' ? 'This year' : '今年行程'));
-  smartRecent.addEventListener('click', () => applySmart(selectRecentTrip(host.allPoints()), host.locale() === 'en' ? 'Recent trip' : '最近旅程'));
-  smartAbroad.addEventListener('click', () => applySmart(selectLikelyAbroad(host.allPoints()), host.locale() === 'en' ? 'Abroad' : '海外行程'));
-  smartTrim.addEventListener('click', () => applySmart(trimIdleEdges(host.currentPoints()), host.locale() === 'en' ? 'Trim idle' : '裁切雜訊'));
+  smartThisYear.addEventListener('click', () => applySmart(selectThisYear(host.allPoints()), L(host.locale(), '今年行程', 'This year', '今年の行程', '올해 일정')));
+  smartRecent.addEventListener('click', () => applySmart(selectRecentTrip(host.allPoints()), L(host.locale(), '最近旅程', 'Recent trip', '最近の旅', '최근 여행')));
+  smartAbroad.addEventListener('click', () => applySmart(selectLikelyAbroad(host.allPoints()), L(host.locale(), '海外行程', 'Abroad', '海外の行程', '해외 일정')));
+  smartTrim.addEventListener('click', () => applySmart(trimIdleEdges(host.currentPoints()), L(host.locale(), '裁切雜訊', 'Trim idle', 'アイドル切り', '유휴 구간 트림')));
 
   suggestDuration.addEventListener('click', () => {
     const km = host.selectedDistanceKm(host.currentPoints());
@@ -157,9 +173,12 @@ export function wireAdvancedControls(host: AdvancedHost): void {
     durationSelect.value = String(seconds);
     durationSelect.dispatchEvent(new Event('change'));
     host.updateSelection();
-    host.flashAction?.(host.locale() === 'en'
-      ? `Suggested duration: ${seconds}s`
-      : `建議片長：${seconds} 秒`);
+    host.flashAction?.(L(host.locale(),
+      `建議片長：${seconds} 秒`,
+      `Suggested duration: ${seconds}s`,
+      `推奨尺：${seconds} 秒`,
+      `권장 길이: ${seconds}초`,
+    ));
   });
 
   templateSelect.addEventListener('change', () => {
@@ -174,9 +193,12 @@ export function wireAdvancedControls(host: AdvancedHost): void {
     formatSelect.dispatchEvent(new Event('change'));
     themeSelect.dispatchEvent(new Event('change'));
     host.updateSelection();
-    host.flashAction?.(host.locale() === 'en'
-      ? `Template applied: ${templateSelect.value}`
-      : `已套用模板：${templateSelect.value}`);
+    host.flashAction?.(L(host.locale(),
+      `已套用模板：${templateSelect.value}`,
+      `Template applied: ${templateSelect.value}`,
+      `テンプレート適用：${templateSelect.value}`,
+      `템플릿 적용: ${templateSelect.value}`,
+    ));
   });
 
   exportGpx.addEventListener('click', () => {

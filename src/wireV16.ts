@@ -13,10 +13,14 @@ import { createZip, downloadBlob } from './zipPack';
 import { buildJourneySrt } from './srt';
 import { cumulativeDistances } from './geo';
 import type { GeoPoint } from './types';
-import type { Locale } from './i18n';
+import { t, type Locale } from './i18n';
 import { uiLocale } from './localeUtil';
 import { buildDayChapters } from './chapters';
 import { narrativeFromPoints } from './narrative';
+
+function msg(locale: Locale, key: Parameters<typeof t>[1], extra = ''): string {
+  return `${t(locale, key)}${extra}`;
+}
 
 export interface V16Host {
   locale: () => Locale;
@@ -90,14 +94,12 @@ export function wireV16(host: V16Host): void {
     const cum = cumulativeDistances(points);
     const clip = bestHighlightClip(points, cum, 30);
     if (!clip) {
-      flash(host.locale() === 'en' ? 'No highlight found' : '找不到精華路段');
+      flash(msg(host.locale(), 'noHighlight'));
       return;
     }
     host.applyClipRange(clip.startDate, clip.endDate, clip.targetSeconds);
     host.setPreviewProgress(clip.startProgress);
-    flash(host.locale() === 'en'
-      ? `Highlight 30s · ${clip.startDate}→${clip.endDate}`
-      : `已套用精華 30 秒 · ${clip.startDate}→${clip.endDate}`);
+    flash(`${msg(host.locale(), 'highlightApplied')} · ${clip.startDate}→${clip.endDate}`);
   });
 
   document.getElementById('trim-intensity')?.addEventListener('change', () => {
@@ -106,9 +108,7 @@ export function wireV16(host: V16Host): void {
     const start = points[0].instant.toISOString().slice(0, 10);
     const end = points.at(-1)!.instant.toISOString().slice(0, 10);
     host.applyClipRange(start, end, Number((document.getElementById('duration') as HTMLSelectElement)?.value || 30));
-    flash(host.locale() === 'en'
-      ? `Trim intensity ${trimIntensity()} · ${points.length} pts`
-      : `裁切強度 ${trimIntensity()} · ${points.length} 點`);
+    flash(`${msg(host.locale(), 'trimApplied')} ${trimIntensity()} · ${points.length}`);
   });
 
   document.getElementById('health-check-button')?.addEventListener('click', () => {
@@ -164,7 +164,7 @@ export function wireV16(host: V16Host): void {
       { name: 'meta.json', data: enc.encode(JSON.stringify({ title: host.getTitle(), period: host.getPeriodLabel(), points: points.length }, null, 2)) },
     ]);
     downloadBlob(zip, 'timeline-pack.zip');
-    flash(host.locale() === 'en' ? 'Pack downloaded' : '已下載打包檔');
+    flash(msg(host.locale(), 'packDownloaded'));
   });
 
   document.getElementById('storyboard-zip-button')?.addEventListener('click', () => {
@@ -204,8 +204,12 @@ export function wireV16(host: V16Host): void {
     const panel = document.getElementById('wrapped-panel');
     if (!panel) return;
     panel.textContent = host.locale() === 'en'
-      ? `${stats.year}: ${stats.km} km · ${stats.days} days · peak ${stats.farthestDate}`
-      : `${stats.year} 年回顧：${stats.km} km · ${stats.days} 天 · 最遠 ${stats.farthestDate}`;
+      ? `${stats.year} ${t(host.locale(), 'wrappedYear')}: ${stats.km} km · ${stats.days} days · peak ${stats.farthestDate}`
+      : host.locale() === 'ja'
+        ? `${stats.year}${t(host.locale(), 'wrappedYear')}：${stats.km} km · ${stats.days} 日 · 最長 ${stats.farthestDate}`
+        : host.locale() === 'ko'
+          ? `${stats.year}${t(host.locale(), 'wrappedYear')}: ${stats.km} km · ${stats.days}일 · 최대 ${stats.farthestDate}`
+          : `${stats.year} ${t(host.locale(), 'wrappedYear')}：${stats.km} km · ${stats.days} 天 · 最遠 ${stats.farthestDate}`;
   });
 
   document.getElementById('retry-720-button')?.addEventListener('click', () => host.retryAtFormat('sq720'));

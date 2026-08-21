@@ -1,3 +1,6 @@
+import type { Locale } from './i18n';
+import { L } from './localeUtil';
+
 const PERF_KEY = 'tv-perf-log-v1';
 
 export interface PerfEntry {
@@ -29,15 +32,18 @@ export function loadPerfLog(): PerfEntry[] {
   }
 }
 
-export function formatPerfSummary(locale: string): string {
+export function formatPerfSummary(locale: Locale | string): string {
+  const loc = (locale === 'en' || locale === 'ja' || locale === 'ko' ? locale : 'zh') as Locale;
   const list = loadPerfLog();
   if (list.length === 0) {
-    return locale === 'en' ? 'No local encode stats yet.' : '尚無本機編碼統計。';
+    return L(loc, '尚無本機編碼統計。', 'No local encode stats yet.', '端末内のエンコード統計はまだありません。', '아직 로컬 인코딩 통계가 없습니다.');
   }
   const avg = list.reduce((sum, entry) => sum + entry.encodeMs, 0) / list.length;
   const last = list.at(-1)!;
-  if (locale === 'en') {
-    return `Avg encode ${(avg / 1000).toFixed(1)}s · last ${last.width}×${last.height} in ${(last.encodeMs / 1000).toFixed(1)}s`;
-  }
-  return `平均編碼 ${(avg / 1000).toFixed(1)} 秒 · 最近 ${last.width}×${last.height} 耗時 ${(last.encodeMs / 1000).toFixed(1)} 秒`;
+  return L(loc,
+    `平均編碼 ${(avg / 1000).toFixed(1)} 秒 · 最近 ${last.width}×${last.height} 耗時 ${(last.encodeMs / 1000).toFixed(1)} 秒`,
+    `Avg encode ${(avg / 1000).toFixed(1)}s · last ${last.width}×${last.height} in ${(last.encodeMs / 1000).toFixed(1)}s`,
+    `平均エンコード ${(avg / 1000).toFixed(1)}秒 · 最近 ${last.width}×${last.height} は ${(last.encodeMs / 1000).toFixed(1)}秒`,
+    `평균 인코딩 ${(avg / 1000).toFixed(1)}초 · 최근 ${last.width}×${last.height} ${(last.encodeMs / 1000).toFixed(1)}초`,
+  );
 }

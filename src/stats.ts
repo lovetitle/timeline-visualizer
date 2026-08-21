@@ -1,3 +1,4 @@
+import type { Locale } from './i18n';
 import type { GeoPoint } from './types';
 import { haversineKm } from './geo';
 import { pointDateKey } from './timeline';
@@ -15,7 +16,7 @@ export interface JourneyStats {
   endDate: string;
 }
 
-export function computeJourneyStats(points: GeoPoint[], locale: 'zh' | 'en'): JourneyStats {
+export function computeJourneyStats(points: GeoPoint[], locale: Locale): JourneyStats {
   if (points.length === 0) {
     return {
       pointCount: 0,

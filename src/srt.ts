@@ -1,4 +1,5 @@
 import { buildCityChapters, buildDayChapters, type Chapter } from './chapters';
+import type { Locale } from './i18n';
 import type { GeoPoint } from './types';
 
 function formatSrtTime(seconds: number): string {
@@ -27,7 +28,7 @@ export function buildJourneySrt(
   points: GeoPoint[],
   cumulativeDistanceKm: number[],
   durationSeconds: number,
-  locale: 'zh' | 'en',
+  locale: Locale,
 ): string {
   const chapters = mode === 'city'
     ? buildCityChapters(points, cumulativeDistanceKm, locale)

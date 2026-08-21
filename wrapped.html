@@ -3,35 +3,102 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>年度回顧 · 時間軸視覺化</title>
+    <title>Year wrap · Timeline Visualizer</title>
     <link rel="icon" href="./icon.svg" type="image/svg+xml" />
     <link rel="stylesheet" href="/src/style.css" />
   </head>
   <body>
     <div class="page">
       <header class="hero">
-        <p class="eyebrow"><a href="./">← 回到工具</a></p>
-        <h1>年度回顧</h1>
-        <p class="lede">在工具頁載入旅程並預覽後，這裡會顯示本機計算的年度摘要（不上傳時間軸）。</p>
+        <p class="eyebrow"><a id="back-link" href="./">←</a></p>
+        <h1 id="heading">年度回顧</h1>
+        <p id="lede" class="lede"></p>
       </header>
       <section class="panel">
-        <p id="wrapped-body" class="status">尚未有統計快照。請先到工具頁載入並預覽／產出。</p>
-        <p><a class="button" href="./">回到工具</a></p>
+        <p id="wrapped-body" class="status"></p>
+        <p><a class="button" id="start-link" href="./">←</a></p>
       </section>
     </div>
     <script type="module">
       import { loadJourneyStatsSnapshot } from '/src/statsPage.ts';
+      const locale = localStorage.getItem('tv-locale') || 'zh';
+      const copy = {
+        zh: {
+          title: '年度回顧 · 時間軸視覺化',
+          back: '← 回到工具',
+          heading: '年度回顧',
+          lede: '在工具頁載入旅程並預覽後，這裡會顯示本機計算的年度摘要（不上傳時間軸）。',
+          empty: '尚未有統計快照。請先到工具頁載入並預覽／產出。',
+          start: '回到工具',
+          year: '年回顧',
+          km: '總里程約',
+          days: '活躍天數',
+          cities: '城市感測',
+          farthest: '最遠一天',
+          cityList: '城市',
+        },
+        en: {
+          title: 'Year wrap · Timeline Visualizer',
+          back: '← Back to tool',
+          heading: 'Year wrap',
+          lede: 'After you preview a journey in the tool, this page shows an on-device yearly summary (Timeline never uploaded).',
+          empty: 'No stats snapshot yet. Load and preview/create in the tool first.',
+          start: 'Back to tool',
+          year: 'year wrap',
+          km: 'About',
+          days: 'Active days',
+          cities: 'city signals',
+          farthest: 'Farthest day',
+          cityList: 'Cities',
+        },
+        ja: {
+          title: '年間振り返り · タイムライン可視化',
+          back: '← ツールに戻る',
+          heading: '年間振り返り',
+          lede: 'ツールで旅をプレビューすると、端末内の年間要約を表示します（タイムライン非アップロード）。',
+          empty: 'まだ統計がありません。先にツールで読み込み／プレビューしてください。',
+          start: 'ツールに戻る',
+          year: '年の振り返り',
+          km: '総距離 約',
+          days: '活動日数',
+          cities: '都市シグナル',
+          farthest: '最長の一日',
+          cityList: '都市',
+        },
+        ko: {
+          title: '연간 리캡 · 타임라인 시각화',
+          back: '← 도구로 돌아가기',
+          heading: '연간 리캡',
+          lede: '도구에서 여정을 미리본 뒤, 기기 내 연간 요약을 보여 줍니다(타임라인 미업로드).',
+          empty: '아직 통계 스냅샷이 없습니다. 도구에서 불러온 뒤 미리보기/만들기를 하세요.',
+          start: '도구로 돌아가기',
+          year: '년 리캡',
+          km: '총 거리 약',
+          days: '활동일',
+          cities: '도시 신호',
+          farthest: '가장 먼 날',
+          cityList: '도시',
+        },
+      };
+      const pack = copy[locale] || copy.zh;
+      document.documentElement.lang = locale === 'zh' ? 'zh-Hant' : locale;
+      document.title = pack.title;
+      document.getElementById('back-link').textContent = pack.back;
+      document.getElementById('heading').textContent = pack.heading;
+      document.getElementById('lede').textContent = pack.lede;
+      document.getElementById('start-link').textContent = pack.start;
       const stats = loadJourneyStatsSnapshot();
       const body = document.getElementById('wrapped-body');
       if (!stats || !stats.pointCount) {
-        body.textContent = '尚未有統計快照。請先到工具頁載入並預覽／產出。';
+        body.textContent = pack.empty;
       } else {
+        const year = stats.startDate.slice(0, 4);
         body.innerHTML = [
-          `<strong>${stats.startDate.slice(0, 4)} 年回顧</strong>`,
-          `總里程約 ${Math.round(stats.totalKm)} km`,
-          `活躍 ${stats.dayCount} 天 · ${stats.cityCount} 個城市感測`,
-          stats.farthestDay ? `最遠一天 ${stats.farthestDay.date}（約 ${Math.round(stats.farthestDay.km)} km）` : '',
-          `城市：${(stats.cities || []).slice(0, 12).join(' · ') || '—'}`,
+          `<strong>${year} ${pack.year}</strong>`,
+          `${pack.km} ${Math.round(stats.totalKm)} km`,
+          `${pack.days} ${stats.dayCount} · ${stats.cityCount} ${pack.cities}`,
+          stats.farthestDay ? `${pack.farthest} ${stats.farthestDay.date}（${Math.round(stats.farthestDay.km)} km）` : '',
+          `${pack.cityList}: ${(stats.cities || []).slice(0, 12).join(' · ') || '—'}`,
         ].filter(Boolean).map((line) => `<div>${line}</div>`).join('');
       }
     </script>

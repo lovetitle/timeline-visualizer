@@ -9,6 +9,7 @@ import { clipToStoryboard, loadStoryboard, saveStoryboard } from './storyboard';
 import { applySuccessSettingsToDom, saveSuccessSettings } from './successSettings';
 import type { GeoPoint, PreparedJourney } from './types';
 import type { Locale } from './i18n';
+import { t } from './i18n';
 import { uiLocale } from './localeUtil';
 
 export interface V15Host {
@@ -141,7 +142,7 @@ export function wireV15(host: V15Host): void {
   document.getElementById('copy-narrative-button')?.addEventListener('click', async () => {
     if (!narrativeBox?.value) return;
     await navigator.clipboard.writeText(narrativeBox.value);
-    host.announce(host.locale() === 'en' ? 'Script copied' : '已複製腳本');
+    host.announce(t(host.locale(), 'scriptCopied'));
   });
   document.getElementById('speak-narrative-button')?.addEventListener('click', () => {
     if (narrativeBox?.value) speakNarrative(narrativeBox.value, host.locale());
@@ -151,13 +152,13 @@ export function wireV15(host: V15Host): void {
   document.getElementById('prefetch-tiles-button')?.addEventListener('click', async () => {
     const journey = host.prepared();
     if (!journey) {
-      host.announce(host.locale() === 'en' ? 'Preview first to load tiles' : '請先預覽以載入圖磚');
+      host.announce(t(host.locale(), 'previewTilesFirst'));
       return;
     }
     const style = host.readMapStyle();
     const keys = [...journey.tiles.keys()].map((key) => `${style}:${key}`);
     await packTilesFromKeys(keys);
-    host.announce(host.locale() === 'en' ? `Cached ${keys.length} tiles` : `已快取 ${keys.length} 片圖磚`);
+    host.announce(`${t(host.locale(), 'tilesCached')} · ${keys.length}`);
   });
 
   document.getElementById('local-share-button')?.addEventListener('click', async () => {
@@ -169,7 +170,7 @@ export function wireV15(host: V15Host): void {
     });
     const url = sharePreviewUrl(id);
     await navigator.clipboard.writeText(url);
-    host.announce(host.locale() === 'en' ? 'Local share link copied (same browser, 24h)' : '已複製本機分享連結（同瀏覽器，24 小時）');
+    host.announce(t(host.locale(), 'localShareCopied'));
   });
 
   refreshClips();

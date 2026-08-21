@@ -40,7 +40,7 @@
               <a href="./privacy.html" data-i18n="privacyLink">隱私報告</a>
               <a href="./stats.html" data-i18n="statsLink">旅程統計</a>
               <a href="./quality.html" data-i18n="qualityLink">品質儀表板</a>
-              <a href="./wrapped.html">年度回顧</a>
+              <a href="./wrapped.html" data-i18n="wrappedLink">年度回顧</a>
               <a href="./terms.html" data-i18n="termsLink">使用條款</a>
             </p>
             <p class="shortcut-hint muted" data-i18n="shortcutHint">快捷鍵：空白鍵預覽 · Enter 產出</p>
@@ -160,13 +160,13 @@
 
           <label id="raw-signals-row" class="checkbox-row hidden">
             <input id="raw-signals-toggle" type="checkbox" />
-            <span>改用原始定位資料</span>
+            <span data-i18n="rawSignals">改用原始定位資料</span>
           </label>
-          <p id="raw-signals-description" class="status hidden">使用未經處理的定位估計。已降低雜訊，但路線與距離仍可能不準。</p>
+          <p id="raw-signals-description" class="status hidden" data-i18n="rawSignalsHelp">使用未經處理的定位估計。已降低雜訊，但路線與距離仍可能不準。</p>
           <label id="raw-accuracy-field" class="hidden">
-            準確度上限（公尺）
+            <span data-i18n="rawAccuracy">準確度上限（公尺）</span>
             <input id="raw-accuracy-limit" type="number" min="0" step="1" inputmode="decimal" value="100" />
-            <span class="field-help">低於此準確度的點會被排除。留空則保留所有可用定位。</span>
+            <span class="field-help" data-i18n="rawAccuracyHelp">低於此準確度的點會被排除。留空則保留所有可用定位。</span>
           </label>
 
           <div id="period-controls">
@@ -202,12 +202,12 @@
           </div>
 
           <ol id="onboarding-steps" class="onboarding-steps" aria-label="新手步驟">
-            <li id="step-export">1 匯出</li>
-            <li id="step-upload">2 上傳</li>
-            <li id="step-preview">3 預覽</li>
-            <li id="step-create">4 產出</li>
+            <li id="step-export" data-i18n="stepExport">1 匯出</li>
+            <li id="step-upload" data-i18n="stepUpload">2 上傳</li>
+            <li id="step-preview" data-i18n="stepPreview">3 預覽</li>
+            <li id="step-create" data-i18n="stepCreate">4 產出</li>
           </ol>
-          <button id="onboarding-next" class="ghost" type="button">下一步引導</button>
+          <button id="onboarding-next" class="ghost" type="button" data-i18n="onboardingNext">下一步引導</button>
 <div class="preset-actions" role="group" aria-label="快速預設">
             <button id="preset-reels" class="ghost" type="button" data-i18n="presetReels">短影音預設</button>
             <button id="preset-island" class="ghost" type="button" data-i18n="presetIsland">環島預設</button>
@@ -468,22 +468,22 @@
           </label>
           <div class="v16-tools">
           <div class="actions">
-            <button id="highlight-30-button" class="secondary" type="button">精華 30 秒</button>
-            <button id="health-check-button" class="ghost" type="button">健康檢查</button>
-            <button id="refresh-calendar-button" class="ghost" type="button">日曆熱點</button>
+            <button id="highlight-30-button" class="secondary" type="button" data-i18n="highlight30">精華 30 秒</button>
+            <button id="health-check-button" class="ghost" type="button" data-i18n="healthCheck">健康檢查</button>
+            <button id="refresh-calendar-button" class="ghost" type="button" data-i18n="calendarHotspots">日曆熱點</button>
           </div>
           <ul id="health-check-panel" class="faq-list"></ul>
           <div id="calendar-day-chips" class="stats-heatmap"></div>
           <label>
-            <span>裁切雜訊強度（km/日）</span>
+            <span data-i18n="trimIntensity">裁切雜訊強度（km／日）</span>
             <input id="trim-intensity" type="range" min="1" max="15" value="3" />
           </label>
           <label>
-            <span>片頭定格（秒）</span>
+            <span data-i18n="introHold">片頭定格（秒）</span>
             <input id="intro-hold" type="number" min="0" max="8" step="0.5" value="1.5" />
           </label>
           <label>
-            <span>日光色調</span>
+            <span data-i18n="colorGrade">日光色調</span>
             <select id="color-grade-select">
               <option value="off" selected>關閉</option>
               <option value="auto">自動</option>
@@ -492,24 +492,24 @@
               <option value="night">夜景</option>
             </select>
           </label>
-          <label class="checkbox-row"><input id="reverse-route-toggle" type="checkbox" /><span>倒轉路線預覽／產出</span></label>
-          <label class="checkbox-row"><input id="narration-chime-toggle" type="checkbox" /><span>燒錄章節提示音（旁白節奏）</span></label>
-          <label class="checkbox-row"><input id="stay-points-toggle" type="checkbox" checked /><span>顯示停留點</span></label>
-          <label class="checkbox-row"><input id="split-compare-toggle" type="checkbox" /><span>雙路線分屏對照</span></label>
-          <label class="checkbox-row"><input id="dual-export-toggle" type="checkbox" /><span>同時產出有聲＋無聲</span></label>
+          <label class="checkbox-row"><input id="reverse-route-toggle" type="checkbox" /><span data-i18n="reverseRoute">倒轉路線預覽／產出</span></label>
+          <label class="checkbox-row"><input id="narration-chime-toggle" type="checkbox" /><span data-i18n="narrationChime">燒錄章節提示音（旁白節奏）</span></label>
+          <label class="checkbox-row"><input id="stay-points-toggle" type="checkbox" checked /><span data-i18n="stayPoints">顯示停留點</span></label>
+          <label class="checkbox-row"><input id="split-compare-toggle" type="checkbox" /><span data-i18n="splitCompare">雙路線分屏對照</span></label>
+          <label class="checkbox-row"><input id="dual-export-toggle" type="checkbox" /><span data-i18n="dualExport">同時產出有聲＋無聲</span></label>
           <div class="actions">
-            <button id="a11y-contrast-button" class="ghost" type="button">高對比</button>
-            <button id="a11y-font-button" class="ghost" type="button">字級</button>
-            <button id="a11y-motion-button" class="ghost" type="button">減少動態</button>
+            <button id="a11y-contrast-button" class="ghost" type="button" data-i18n="a11yContrast">高對比</button>
+            <button id="a11y-font-button" class="ghost" type="button" data-i18n="a11yFont">字級</button>
+            <button id="a11y-motion-button" class="ghost" type="button" data-i18n="a11yMotion">減少動態</button>
           </div>
           <label>
-            <span>人生章節標籤</span>
-            <input id="life-tag-input" type="text" placeholder="例如：求學／旅行" />
+            <span data-i18n="lifeTagLabel">人生章節標籤</span>
+            <input id="life-tag-input" type="text" placeholder="例如：求學／旅行" data-i18n-placeholder="lifeTagPlaceholder" />
           </label>
-          <button id="add-life-tag-button" class="ghost" type="button">加入標籤</button>
+          <button id="add-life-tag-button" class="ghost" type="button" data-i18n="addLifeTag">加入標籤</button>
           <ul id="life-tags-list" class="faq-list"></ul>
           <p id="wrapped-panel" class="status muted"></p>
-          <button id="wrapped-refresh-button" class="ghost" type="button">年度回顧摘要</button>
+          <button id="wrapped-refresh-button" class="ghost" type="button" data-i18n="wrappedSummary">年度回顧摘要</button>
         </div>
 <div class="v15-tools">
           <div class="section-heading"><h3 data-i18n="smartClips">智慧剪輯建議</h3>
@@ -549,17 +549,17 @@
             </label>
             <button id="download-srt-button" class="secondary" type="button" data-i18n="downloadSrt">下載章節 SRT</button>
             <button id="another-round-button" class="secondary" type="button" data-i18n="anotherRound">再開一輪（保留設定）</button>
-            <button id="download-report-button" class="secondary" type="button">下載旅程報告</button>
-            <button id="pack-export-button" class="secondary" type="button">打包腳本＋SRT</button>
-            <button id="storyboard-zip-button" class="secondary" type="button">故事板 ZIP</button>
-            <button id="draw-share-qr-button" class="secondary" type="button">分享卡 QR</button>
+            <button id="download-report-button" class="secondary" type="button" data-i18n="downloadReport">下載旅程報告</button>
+            <button id="pack-export-button" class="secondary" type="button" data-i18n="packExport">打包腳本＋SRT</button>
+            <button id="storyboard-zip-button" class="secondary" type="button" data-i18n="storyboardZip">故事板 ZIP</button>
+            <button id="draw-share-qr-button" class="secondary" type="button" data-i18n="shareQr">分享卡 QR</button>
             <canvas id="share-qr-canvas" class="hidden" width="160" height="160"></canvas>
-            <button id="retry-720-button" class="ghost" type="button">失敗改 720p</button>
-            <button id="retry-480-button" class="ghost" type="button">失敗改 480p</button>
+            <button id="retry-720-button" class="ghost" type="button" data-i18n="retry720">失敗改 720p</button>
+            <button id="retry-480-button" class="ghost" type="button" data-i18n="retry480">失敗改 480p</button>
 <button id="local-share-button" class="secondary" type="button" data-i18n="localShare">本機分享連結</button>
           </div>
           <div id="share-card" class="share-card hidden">
-            <h3 id="share-card-title">分享卡片</h3>
+            <h3 id="share-card-title" data-i18n="shareCardTitle">分享卡片</h3>
             <p id="share-card-meta" class="muted"></p>
             <canvas id="share-card-canvas" width="480" height="480"></canvas>
           </div>
@@ -584,6 +584,8 @@
           <a href="./stats.html" data-i18n="statsLink">旅程統計</a>
           ·
           <a href="./quality.html" data-i18n="qualityLink">品質儀表板</a>
+          ·
+          <a href="./wrapped.html" data-i18n="wrappedLink">年度回顧</a>
           ·
           <a href="./terms.html" data-i18n="termsLink">使用條款</a>
           ·

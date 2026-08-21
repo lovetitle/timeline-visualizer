@@ -8,6 +8,7 @@ import {
 } from 'mediabunny';
 import { frameAtElapsedSeconds } from './animation';
 import { chapterLabelFor } from './chapters';
+import type { Locale } from './i18n';
 import { placeLabelAtProgress } from './places';
 import { drawFrame } from './renderer';
 import type { DrawStyle, PreparedJourney } from './types';
@@ -20,7 +21,7 @@ export interface ExportOptions {
   outroHoldSeconds: number;
   showPlaceLabels: boolean;
   chapterMode: string;
-  locale: 'zh' | 'en';
+  locale: Locale;
   audioBuffer?: AudioBuffer | null;
   onProgress?: (fraction: number) => void;
   signal?: AbortSignal;

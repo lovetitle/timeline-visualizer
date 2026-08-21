@@ -1,3 +1,5 @@
+import type { Locale } from './i18n';
+import { L } from './localeUtil';
 import type { GeoPoint } from './types';
 import { pointDateKey } from './timeline';
 import { nearestCityLabel } from './places';
@@ -11,7 +13,7 @@ export interface Chapter {
 export function buildDayChapters(
   points: GeoPoint[],
   cumulativeDistanceKm: number[],
-  locale: 'zh' | 'en',
+  locale: Locale,
 ): Chapter[] {
   if (points.length === 0) return [];
   const total = cumulativeDistanceKm.at(-1) ?? 0;
@@ -42,13 +44,14 @@ export function buildDayChapters(
 export function buildCityChapters(
   points: GeoPoint[],
   cumulativeDistanceKm: number[],
-  locale: 'zh' | 'en',
+  locale: Locale,
 ): Chapter[] {
   if (points.length === 0) return [];
   const total = cumulativeDistanceKm.at(-1) ?? 0;
   if (total <= 0) return [];
   const chapters: Chapter[] = [];
-  let current = nearestCityLabel(points[0], locale) ?? (locale === 'en' ? 'On the road' : '旅途中');
+  const onRoad = L(locale, '旅途中', 'On the road', '移動中', '이동 중');
+  let current = nearestCityLabel(points[0], locale) ?? onRoad;
   let startProgress = 0;
   for (let index = 1; index < points.length; index += 1) {
     const label = nearestCityLabel(points[index], locale) ?? current;
@@ -64,19 +67,19 @@ export function buildCityChapters(
   return chapters;
 }
 
-export function chapterAt(chapters: Chapter[], progress: number): string | null {
-  const hit = chapters.find((chapter) => progress >= chapter.startProgress && progress <= chapter.endProgress);
-  return hit?.label ?? chapters.at(-1)?.label ?? null;
-}
-
 export function chapterLabelFor(
-  mode: string,
+  mode: 'off' | 'day' | 'city' | string,
   points: GeoPoint[],
   cumulativeDistanceKm: number[],
   progress: number,
-  locale: 'zh' | 'en',
+  locale: Locale,
 ): string | null {
-  if (mode === 'day') return chapterAt(buildDayChapters(points, cumulativeDistanceKm, locale), progress);
-  if (mode === 'city') return chapterAt(buildCityChapters(points, cumulativeDistanceKm, locale), progress);
-  return null;
+  if (mode === 'off') return null;
+  const chapters = mode === 'city'
+    ? buildCityChapters(points, cumulativeDistanceKm, locale)
+    : buildDayChapters(points, cumulativeDistanceKm, locale);
+  for (const chapter of chapters) {
+    if (progress >= chapter.startProgress && progress <= chapter.endProgress) return chapter.label;
+  }
+  return chapters.at(-1)?.label ?? null;
 }

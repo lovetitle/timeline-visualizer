@@ -16,6 +16,7 @@ const SELECT_LABELS: Record<Locale, Record<string, Record<string, string>>> = {
     mapStyle: { light: '淺色', dark: '深色', voyager: 'Voyager', satellite: '衛星', terrain: '地形', night: '夜景' },
     marker: { dot: '圓點', plane: '飛機', foot: '步行' },
     chapter: { off: '關閉', day: '依日', city: '依城市' },
+    colorGrade: { off: '關閉', auto: '自動', warm: '暖色', cool: '冷色', night: '夜景' },
     template: {
       '': '（手動設定）',
       island: '環島日記',
@@ -36,6 +37,7 @@ const SELECT_LABELS: Record<Locale, Record<string, Record<string, string>>> = {
     mapStyle: { light: 'Light', dark: 'Dark', voyager: 'Voyager', satellite: 'Satellite', terrain: 'Terrain', night: 'Night' },
     marker: { dot: 'Dot', plane: 'Plane', foot: 'Walk' },
     chapter: { off: 'Off', day: 'By day', city: 'By city' },
+    colorGrade: { off: 'Off', auto: 'Auto', warm: 'Warm', cool: 'Cool', night: 'Night' },
     template: {
       '': '(Manual)',
       island: 'Island Loop',
@@ -56,6 +58,7 @@ const SELECT_LABELS: Record<Locale, Record<string, Record<string, string>>> = {
     mapStyle: { light: 'ライト', dark: 'ダーク', voyager: 'Voyager', satellite: '衛星', terrain: '地形', night: '夜景' },
     marker: { dot: '点', plane: '飛行機', foot: '徒歩' },
     chapter: { off: 'オフ', day: '日ごと', city: '都市ごと' },
+    colorGrade: { off: 'オフ', auto: '自動', warm: '暖色', cool: '寒色', night: '夜' },
     template: {
       '': '（手動）',
       island: '島めぐり',
@@ -76,6 +79,7 @@ const SELECT_LABELS: Record<Locale, Record<string, Record<string, string>>> = {
     mapStyle: { light: '밝게', dark: '어둡게', voyager: 'Voyager', satellite: '위성', terrain: '지형', night: '야경' },
     marker: { dot: '점', plane: '비행기', foot: '걷기' },
     chapter: { off: '끔', day: '일별', city: '도시별' },
+    colorGrade: { off: '끔', auto: '자동', warm: '따뜻한', cool: '차가운', night: '야간' },
     template: {
       '': '(수동)',
       island: '섬 일주',
@@ -106,6 +110,21 @@ export function applySelectLocale(locale: Locale): void {
   relabelSelect('marker-style-select', pack.marker);
   relabelSelect('chapter-select', pack.chapter);
   relabelSelect('template-select', pack.template);
+  relabelSelect('color-grade-select', pack.colorGrade);
+
+  const durationSelect = document.getElementById('duration') as HTMLSelectElement | null;
+  if (durationSelect) {
+    for (const option of Array.from(durationSelect.options)) {
+      const seconds = option.value;
+      option.textContent = locale === 'en'
+        ? `${seconds}s`
+        : locale === 'ja'
+          ? `${seconds} 秒`
+          : locale === 'ko'
+            ? `${seconds}초`
+            : `${seconds} 秒`;
+    }
+  }
 
   const themeSelect = document.getElementById('theme-select') as HTMLSelectElement | null;
   if (themeSelect) {
