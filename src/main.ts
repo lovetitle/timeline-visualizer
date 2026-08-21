@@ -1,4 +1,5 @@
 import './style.css';
+import { injectSpeedInsights } from '@vercel/speed-insights';
 import { frameAtElapsedSeconds, totalDurationSeconds } from './animation';
 import { cumulativeDistances } from './geo';
 import { drawFrame, prepareJourney } from './renderer';
@@ -83,6 +84,9 @@ let compatibilityChecked = false;
 let isExporting = false;
 let isPreparing = false;
 let exportController: AbortController | null = null;
+
+// Initialize Vercel Speed Insights
+injectSpeedInsights();
 
 function localizeError(error: unknown, fallback: string): string {
   if (error instanceof TimelineParseError) {
@@ -374,7 +378,7 @@ dropZone.addEventListener('drop', async (event) => {
 sampleButton.addEventListener('click', async () => {
   setError(null);
   setSettingsError(null);
-  fileStatus.textContent = '正在載入虛構範例…';
+  fileStatus.textContent = '正在載入虛構���例…';
   try {
     const response = await fetch(`${import.meta.env.BASE_URL}sample-timeline.json`);
     if (!response.ok) throw new Error('無法載入虛構範例。');
