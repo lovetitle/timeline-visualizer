@@ -1,4 +1,5 @@
 import './style.css';
+import { inject } from '@vercel/analytics';
 import { frameAtElapsedSeconds, totalDurationSeconds } from './animation';
 import { cumulativeDistances } from './geo';
 import { drawFrame, prepareJourney } from './renderer';
@@ -16,6 +17,9 @@ import {
 import type { RawSignalPoint, RawSignalProcessingResult } from './timeline';
 import type { CameraMovement, GeoPoint, MonthOption, PreparedJourney } from './types';
 import { canCreateMp4, createJourneyMp4 } from './video';
+
+// Initialize Vercel Analytics
+inject();
 
 function element<T extends HTMLElement>(id: string): T {
   const found = document.getElementById(id);
