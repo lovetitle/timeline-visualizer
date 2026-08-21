@@ -16,6 +16,7 @@ export default defineConfig({
         legalPrivacy: 'legal-privacy.html',
         share: 'share.html',
         quality: 'quality.html',
+        wrapped: 'wrapped.html',
       },
     },
   },

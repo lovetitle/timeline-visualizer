@@ -1,43 +1,37 @@
 import type { Locale } from './i18n';
 
-export type MapStyleId = 'light' | 'dark' | 'voyager';
+export type MapStyleId = 'light' | 'dark' | 'voyager' | 'satellite' | 'terrain' | 'night';
 
-/** Base style ids; actual URL depends on UI locale for labeled tiles. */
 export const MAP_STYLES: Record<MapStyleId, { labelZh: string; labelEn: string }> = {
   light: { labelZh: '亮色', labelEn: 'Light' },
   dark: { labelZh: '暗色', labelEn: 'Dark' },
   voyager: { labelZh: '簡約', labelEn: 'Voyager' },
+  satellite: { labelZh: '衛星', labelEn: 'Satellite' },
+  terrain: { labelZh: '地形', labelEn: 'Terrain' },
+  night: { labelZh: '夜景', labelEn: 'Night' },
 };
 
 /**
- * Raster tiles with language-appropriate labels where free sources allow.
- * CARTO labeled rasters are English-centric; for CJK we prefer OSM community tiles.
- * Dark style uses CARTO nolabels (no English text) so our in-app captions dominate.
+ * Locale-aware raster tiles. Vector MapLibre (name:zh/ja) is approximated by
+ * choosing OSM community tiles that favor local-script labels.
  */
 export function tileUrlTemplate(style: MapStyleId, locale: Locale): string {
-  if (style === 'dark') {
-    // Avoid English dark labels; rely on route + place/chapter captions.
+  if (style === 'satellite') {
+    return 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
+  }
+  if (style === 'terrain') {
+    return 'https://tile.opentopomap.org/{z}/{x}/{y}.png';
+  }
+  if (style === 'night' || style === 'dark') {
     return 'https://a.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}.png';
   }
 
   if (locale === 'ja') {
-    // Japanese community tiles (Japanese labels in Japan; elsewhere may fall back).
-    if (style === 'voyager') {
-      return 'https://tile.openstreetmap.jp/{z}/{x}/{y}.png';
-    }
     return 'https://tile.openstreetmap.jp/{z}/{x}/{y}.png';
   }
-
-  if (locale === 'zh') {
-    // Standard OSM shows local-script names in Taiwan/China more often than CARTO English.
+  if (locale === 'zh' || locale === 'ko') {
     return 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
   }
-
-  if (locale === 'ko') {
-    return 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
-  }
-
-  // English UI: keep CARTO English-labeled styles.
   if (style === 'voyager') {
     return 'https://a.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png';
   }

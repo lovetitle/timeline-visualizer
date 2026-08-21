@@ -223,7 +223,10 @@ export function wireAdvancedControls(host: AdvancedHost): void {
 
 export function readMapStyle(): MapStyleId {
   const value = (document.getElementById('map-style-select') as HTMLSelectElement | null)?.value;
-  return value === 'dark' || value === 'voyager' ? value : 'light';
+  if (value === 'dark' || value === 'voyager' || value === 'satellite' || value === 'terrain' || value === 'night') {
+    return value;
+  }
+  return 'light';
 }
 
 export function readMarkerStyle(): MarkerStyleId {

@@ -26,6 +26,9 @@ export interface ExportOptions {
   signal?: AbortSignal;
   /** When paused is true, encoding waits without aborting. */
   pauseGate?: { paused: boolean };
+  introHoldSeconds?: number;
+  gradeOverlayAt?: (progress: number) => string | null;
+  reverseRoute?: boolean;
 }
 
 export function hasVideoEncoder(): boolean {
@@ -130,9 +133,11 @@ async function encodeWithCodec(
 ): Promise<Blob> {
   const fps = 24;
   const frameDuration = 1 / fps;
+  const introHold = Math.max(0, options.introHoldSeconds ?? 0);
+  const introFrameCount = Math.round(introHold * fps);
   const journeyFrameCount = Math.max(1, Math.round(options.durationSeconds * fps));
   const outroFrameCount = Math.round(Math.max(1.5, options.outroHoldSeconds) * fps);
-  const frameCount = journeyFrameCount + outroFrameCount;
+  const frameCount = introFrameCount + journeyFrameCount + outroFrameCount;
   const bitrate = bitrateForSize(canvas.width, canvas.height);
   const target = new BufferTarget();
   const output = new Output({
@@ -180,16 +185,31 @@ async function encodeWithCodec(
       await output.cancel();
       throw new DOMException('已取消產出影片。', 'AbortError');
     }
-    const animationFrame = frame < journeyFrameCount
-      ? {
-        journeyProgress: journeyFrameCount === 1 ? 1 : frame / (journeyFrameCount - 1),
+
+    let animationFrame: { journeyProgress: number; outroProgress: number };
+    let introProgress = 0;
+    if (frame < introFrameCount) {
+      animationFrame = { journeyProgress: 0, outroProgress: 0 };
+      introProgress = 1 - frame / Math.max(1, introFrameCount);
+    } else if (frame < introFrameCount + journeyFrameCount) {
+      const journeyFrame = frame - introFrameCount;
+      const raw = journeyFrameCount === 1 ? 1 : journeyFrame / (journeyFrameCount - 1);
+      animationFrame = {
+        journeyProgress: options.reverseRoute ? 1 - raw : raw,
         outroProgress: 0,
-      }
-      : frameAtElapsedSeconds(
-        options.durationSeconds + (frame - journeyFrameCount) / fps,
+      };
+    } else {
+      const outroFrame = frame - introFrameCount - journeyFrameCount;
+      animationFrame = frameAtElapsedSeconds(
+        options.durationSeconds + outroFrame / fps,
         options.durationSeconds,
         options.outroHoldSeconds,
       );
+      if (options.reverseRoute) {
+        animationFrame = { ...animationFrame, journeyProgress: 1 };
+      }
+    }
+
     const placeLabel = options.showPlaceLabels
       ? placeLabelAtProgress(
         journey.points,
@@ -209,6 +229,10 @@ async function encodeWithCodec(
       ...options.style,
       placeLabel,
       chapterLabel,
+      gradeOverlay: options.gradeOverlayAt?.(animationFrame.journeyProgress) ?? options.style.gradeOverlay,
+      introTitle: introProgress > 0 ? options.title : null,
+      introSubtitle: introProgress > 0 ? options.periodLabel : null,
+      introProgress,
     });
     await source.add(frame * frameDuration, frameDuration, { keyFrame: frame % fps === 0 });
     options.onProgress?.((frame + 1) / frameCount);

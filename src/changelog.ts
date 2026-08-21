@@ -9,6 +9,48 @@ export interface ChangelogVersion {
 /** Newest first. Each locale keeps its own wording; older releases stay listed. */
 export const CHANGELOG: ChangelogVersion[] = [
   {
+    version: '1.6.0',
+    date: '2026-08-21',
+    items: {
+      zh: [
+        '精華 30 秒、片頭定格、倒轉路線、日光／暖冷／夜景色調',
+        '章節提示音燒錄、有聲＋無聲雙檔產出、雙路線分屏對照',
+        '衛星／地形／夜景底圖、停留點、日曆熱點選日、裁切強度',
+        '設定即時預覽、失敗一鍵改 720p／480p、新手四步引導',
+        '健康檢查、高對比／字級／減少動態、人生章節標籤、年度回顧頁',
+        '旅程報告圖、腳本＋SRT 打包 ZIP、故事板 ZIP、分享卡 QR',
+        '快捷鍵 ←→ 微調進度、S 套用精華；向量地圖以 OSM 本地語系圖磚近似 name:zh／ja',
+      ],
+      en: [
+        'Highlight 30s, intro hold, reverse route, daylight/warm/cool/night grading',
+        'Chapter chime burn-in, dual silent+audio export, split-screen compare',
+        'Satellite/terrain/night basemaps, stay points, calendar day chips, trim intensity',
+        'Live preview on settings, one-click retry 720p/480p, 4-step onboarding',
+        'Health check, contrast/font/reduce-motion, life tags, year-wrapped page',
+        'Journey report image, script+SRT zip, storyboard zip, share-card QR',
+        'Arrow keys scrub preview, S applies highlight; locale tiles approximate vector name:zh/ja',
+      ],
+      ja: [
+        'ハイライト30秒、イントロ、逆再生、日光／暖色／寒色／夜の色調',
+        '章チャイム焼き込み、音声あり／なし二本出力、左右比較',
+        '衛星／地形／夜景、滞在点、カレンダー日選択、トリム強度',
+        '設定の即時プレビュー、720p／480p 一発リトライ、4ステップ案内',
+        'ヘルスチェック、コントラスト／文字サイズ／動き軽減、人生タグ、年間振り返り',
+        '旅程レポート、原稿+SRT ZIP、ストーリーボード ZIP、共有 QR',
+        '←→ でスクラブ、S でハイライト。OSM タイルで name:zh/ja を近似',
+      ],
+      ko: [
+        '하이라이트 30초, 인트로, 역재생, 낮/暖/冷/야간 색감',
+        '챕터 차임 번인, 유성+무성 이중 내보내기, 분할 대조',
+        '위성/지형/야경, 체류점, 달력 일자, 트림 강도',
+        '설정 즉시 미리보기, 720p/480p 원클릭 재시도, 4단계 온보딩',
+        '헬스 체크, 대비/글자/모션 감소, 인생 태그, 연간 리캡 페이지',
+        '여정 리포트, 원고+SRT ZIP, 스토리보드 ZIP, 공유 QR',
+        '←→ 스크럽, S 하이라이트. OSM 타일로 name:zh/ja 근사',
+      ],
+    },
+  },
+  {
     version: '1.5.1',
     date: '2026-08-21',
     items: {

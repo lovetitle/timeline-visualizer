@@ -337,6 +337,11 @@ export function drawFrame(
     : blendViewport(journeyViewport, journey.overviewViewport, easeOutCubic(frame.outroProgress), size);
   drawMapBackground(canvas, viewport, journey.tiles);
 
+  if (style.gradeOverlay) {
+    context.fillStyle = style.gradeOverlay;
+    context.fillRect(0, 0, width, height);
+  }
+
   const current = pointAtProgress(journey, frame.journeyProgress);
   context.lineCap = 'round';
   context.lineJoin = 'round';
@@ -441,6 +446,60 @@ export function drawFrame(
     context.font = `700 ${22 * scale}px "Segoe UI", "PingFang TC", "Noto Sans TC", sans-serif`;
     context.textAlign = 'center';
     context.fillText(caption, width / 2, boxY + 32 * scale, boxW - 24 * scale);
+  }
+
+  if (style.stayMarkers?.length) {
+    context.save();
+    context.fillStyle = 'rgba(196,92,38,0.9)';
+    for (const marker of style.stayMarkers) {
+      context.beginPath();
+      context.arc(marker.x, marker.y, Math.max(4, size / 120), 0, Math.PI * 2);
+      context.fill();
+    }
+    context.restore();
+  }
+
+  if (style.splitCompareProgress !== undefined && style.compareWorldPoints && style.compareWorldPoints.length > 1) {
+    const splitX = width * Math.max(0.05, Math.min(0.95, style.splitCompareProgress));
+    context.save();
+    context.beginPath();
+    context.rect(splitX, 0, width - splitX, height);
+    context.clip();
+    context.globalAlpha = 0.55;
+    context.strokeStyle = '#1f6feb';
+    context.lineWidth = Math.max(3, size / 140);
+    strokeRoute(
+      context,
+      style.compareWorldPoints.slice(0, -1),
+      style.compareWorldPoints.at(-1)!,
+      viewport,
+      width,
+      height,
+    );
+    context.restore();
+    context.strokeStyle = 'rgba(246,243,238,0.9)';
+    context.lineWidth = 2;
+    context.beginPath();
+    context.moveTo(splitX, 0);
+    context.lineTo(splitX, height);
+    context.stroke();
+  }
+
+  if ((style.introProgress ?? 0) > 0 && style.introTitle) {
+    const alpha = Math.min(1, style.introProgress! * 2);
+    context.save();
+    context.globalAlpha = alpha;
+    context.fillStyle = 'rgba(28,42,36,0.55)';
+    context.fillRect(0, 0, width, height);
+    context.fillStyle = '#f6f3ee';
+    context.textAlign = 'center';
+    context.font = `700 ${42 * scale}px "Segoe UI", "PingFang TC", "Noto Sans TC", sans-serif`;
+    context.fillText(style.introTitle, width / 2, height * 0.45, width * 0.86);
+    if (style.introSubtitle) {
+      context.font = `${22 * scale}px "Segoe UI", "PingFang TC", "Noto Sans TC", sans-serif`;
+      context.fillText(style.introSubtitle, width / 2, height * 0.52, width * 0.86);
+    }
+    context.restore();
   }
 
   if (style.hudText) {

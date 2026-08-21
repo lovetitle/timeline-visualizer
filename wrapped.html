@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>年度回顧 · 時間軸視覺化</title>
+    <link rel="icon" href="./icon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body>
+    <div class="page">
+      <header class="hero">
+        <p class="eyebrow"><a href="./">← 回到工具</a></p>
+        <h1>年度回顧</h1>
+        <p class="lede">在工具頁載入旅程並預覽後，這裡會顯示本機計算的年度摘要（不上傳時間軸）。</p>
+      </header>
+      <section class="panel">
+        <p id="wrapped-body" class="status">尚未有統計快照。請先到工具頁載入並預覽／產出。</p>
+        <p><a class="button" href="./">回到工具</a></p>
+      </section>
+    </div>
+    <script type="module">
+      import { loadJourneyStatsSnapshot } from '/src/statsPage.ts';
+      const stats = loadJourneyStatsSnapshot();
+      const body = document.getElementById('wrapped-body');
+      if (!stats || !stats.pointCount) {
+        body.textContent = '尚未有統計快照。請先到工具頁載入並預覽／產出。';
+      } else {
+        body.innerHTML = [
+          `<strong>${stats.startDate.slice(0, 4)} 年回顧</strong>`,
+          `總里程約 ${Math.round(stats.totalKm)} km`,
+          `活躍 ${stats.dayCount} 天 · ${stats.cityCount} 個城市感測`,
+          stats.farthestDay ? `最遠一天 ${stats.farthestDay.date}（約 ${Math.round(stats.farthestDay.km)} km）` : '',
+          `城市：${(stats.cities || []).slice(0, 12).join(' · ') || '—'}`,
+        ].filter(Boolean).map((line) => `<div>${line}</div>`).join('');
+      }
+    </script>
+  </body>
+</html>

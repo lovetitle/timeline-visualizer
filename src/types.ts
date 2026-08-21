@@ -61,6 +61,12 @@ export interface DrawStyle {
   showAttribution?: boolean;
   attributionText?: string;
   hudText?: string | null;
+  gradeOverlay?: string | null;
+  introTitle?: string | null;
+  introSubtitle?: string | null;
+  introProgress?: number;
+  stayMarkers?: { x: number; y: number; label: string }[];
+  splitCompareProgress?: number;
 }
 
 export interface PreparedJourney {

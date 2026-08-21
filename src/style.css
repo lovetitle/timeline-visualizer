@@ -1083,3 +1083,38 @@ body.is-exporting .preview-panel {
   border: 0;
 }
 #narrative-text { width: 100%; min-height: 96px; resize: vertical; }
+
+/* v1.6 */
+.onboarding-steps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  list-style: none;
+  padding: 0;
+  margin: 0 0 8px;
+}
+.onboarding-steps li {
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(28,42,36,0.18);
+  font-size: 12px;
+  opacity: 0.55;
+}
+.onboarding-steps li.onboarding-done {
+  opacity: 1;
+  background: rgba(196,92,38,0.12);
+  border-color: rgba(196,92,38,0.45);
+}
+.v16-tools { display: grid; gap: 8px; margin: 0 0 12px; }
+html.a11y-contrast {
+  filter: contrast(1.15);
+}
+html {
+  font-size: calc(16px * var(--a11y-font-scale, 1));
+}
+html.a11y-reduce-motion *,
+html.a11y-reduce-motion *::before,
+html.a11y-reduce-motion *::after {
+  animation: none !important;
+  transition: none !important;
+}

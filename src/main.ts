@@ -22,7 +22,7 @@ import { downsamplePoints, suggestMaxPoints } from './downsample';
 import { downloadText } from './exportTrack';
 import { refreshExtrasLabels, wireExtras } from './extras';
 import { formatById } from './formats';
-import { cumulativeDistances } from './geo';
+import { cumulativeDistances, project } from './geo';
 import { applyGuideLocale } from './guideI18n';
 import { drawHeatmapPoster } from './heatmap';
 import { t, type Locale } from './i18n';
@@ -66,6 +66,18 @@ import {
   type V14Host,
 } from './wireV14';
 import { saveSuccessSettings, wireV15 } from './wireV15';
+import {
+  dualExportEnabled,
+  introHoldSeconds,
+  maybeMixNarration,
+  readColorGrade,
+  reverseRouteEnabled,
+  splitCompareEnabled,
+  stayPointsEnabled,
+  wireV16,
+} from './wireV16';
+import { gradeForProgress } from './colorGrade';
+import { detectStayPoints } from './stayPoints';
 import { pushQualityRow } from './qualityDash';
 import { speedKmhAt } from './smartClips';
 
@@ -545,6 +557,8 @@ function applyPoints(points: GeoPoint[], sourceName: string, append: boolean): v
   exactDateFields.classList.add('hidden');
   mapConsent.checked = false;
   settingsCard.classList.remove('hidden');
+  document.getElementById('step-upload')?.classList.add('onboarding-done');
+  localStorage.setItem('tv-onboarding-step', '1');
   previewCard.classList.add('hidden');
   defaultRecentRange(allPoints);
   renderMergeList();
@@ -657,11 +671,13 @@ function currentStyle() {
   const burn = Boolean((document.getElementById('burn-captions-toggle') as HTMLInputElement | null)?.checked);
   const showAttribution = Boolean((document.getElementById('show-attribution-toggle') as HTMLInputElement | null)?.checked ?? true);
   const mapStyle = readMapStyle();
-  const attributionText = locale === 'en' && mapStyle !== 'dark'
+  const attributionText = (locale === 'en' && mapStyle !== 'dark' && mapStyle !== 'night' && mapStyle !== 'satellite' && mapStyle !== 'terrain')
     ? '© OpenStreetMap contributors  © CARTO'
-    : mapStyle === 'dark'
-      ? '© OpenStreetMap contributors  © CARTO'
-      : '© OpenStreetMap contributors';
+    : mapStyle === 'satellite'
+      ? '© Esri'
+      : mapStyle === 'terrain'
+        ? '© OpenStreetMap © OpenTopoMap'
+        : '© OpenStreetMap contributors';
   return {
     route: theme.route,
     routeFade: theme.routeFade,
@@ -676,7 +692,23 @@ function currentStyle() {
     burnCaptions: burn,
     showAttribution,
     attributionText,
+    splitCompareProgress: splitCompareEnabled() ? 0.5 : undefined,
   };
+}
+
+function stayMarkersForJourney(journey: PreparedJourney): { x: number; y: number; label: string }[] {
+  if (!stayPointsEnabled()) return [];
+  const viewport = journey.overviewViewport;
+  const width = canvas.width;
+  const height = canvas.height;
+  return detectStayPoints(journey.points).map((stay) => {
+    const point = project(stay.latitude, stay.longitude);
+    return {
+      x: ((point.x - viewport.minX) / Math.max(1e-9, viewport.maxX - viewport.minX)) * width,
+      y: ((point.y - viewport.minY) / Math.max(1e-9, viewport.maxY - viewport.minY)) * height,
+      label: stay.label,
+    };
+  });
 }
 
 async function renderPreviewAt(progress01: number): Promise<void> {
@@ -706,6 +738,8 @@ async function renderPreviewAt(progress01: number): Promise<void> {
       const hud = speedKmhAt(journey.points, journey.cumulativeDistanceKm, frame.journeyProgress);
       return `${Math.round(hud.distanceKm)} km · ${Math.round(hud.speedKmh)} km/h`;
     })(),
+    gradeOverlay: gradeForProgress(journey.points, frame.journeyProgress, readColorGrade()),
+    stayMarkers: stayMarkersForJourney(journey),
   });
   const scrubber = document.getElementById('preview-scrubber') as HTMLInputElement | null;
   if (scrubber) scrubber.value = String(Math.round(progress01 * 1000));
@@ -889,12 +923,16 @@ previewButton.addEventListener('click', async () => {
           const hud = speedKmhAt(journey.points, journey.cumulativeDistanceKm, frame.journeyProgress);
           return `${Math.round(hud.distanceKm)} km · ${Math.round(hud.speedKmh)} km/h`;
         })(),
+        gradeOverlay: gradeForProgress(journey.points, frame.journeyProgress, readColorGrade()),
+        stayMarkers: stayMarkersForJourney(journey),
       });
       progressLabel.textContent = fraction < 1
         ? (locale === 'en' ? `Previewing ${speed}x` : `預覽中 ${speed}x`)
         : (locale === 'en' ? 'Preview complete' : '預覽完成');
       const live = document.getElementById('a11y-live');
       if (live && Math.round(fraction * 20) % 5 === 0) live.textContent = progressLabel.textContent;
+      localStorage.setItem('tv-onboarding-step', '2');
+      document.getElementById('step-preview')?.classList.add('onboarding-done');
       if (fraction < 1) previewAnimation = requestAnimationFrame(tick);
     };
     previewAnimation = requestAnimationFrame(tick);
@@ -995,19 +1033,30 @@ async function runExportOnce(): Promise<void> {
           const journey = await getPreparedJourney(exportController!.signal);
           const style = currentStyle();
           const burn = Boolean(style.burnCaptions);
+          const mixedAudio = await maybeMixNarration(
+            audioBuffer,
+            journey.points,
+            Number(durationSelect.value) + Number(outroHoldInput.value || 2.5) + introHoldSeconds(),
+          );
           progressLabel.textContent = isEnglishLike() ? 'Creating MP4' : '正在產出 MP4';
-          return createJourneyMp4(canvas, journey, {
+          const makeBlob = async (withAudio: AudioBuffer | null) => createJourneyMp4(canvas, journey, {
             durationSeconds: Number(durationSelect.value),
             title: titleInput.value.trim() || (isEnglishLike() ? 'My Journey' : '我的旅程'),
             periodLabel: currentPeriodLabel(),
-            style,
+            style: {
+              ...style,
+              stayMarkers: stayMarkersForJourney(journey),
+            },
             outroHoldSeconds: Number(outroHoldInput.value) || 2.5,
+            introHoldSeconds: introHoldSeconds(),
             showPlaceLabels: placeLabelsToggle.checked || burn,
             chapterMode: burn && chapterMode() === 'off' ? 'day' : chapterMode(),
             locale: uiLocale(locale),
-            audioBuffer,
+            audioBuffer: withAudio,
             signal: exportController!.signal,
             pauseGate,
+            reverseRoute: reverseRouteEnabled(),
+            gradeOverlayAt: (progress) => gradeForProgress(journey.points, progress, readColorGrade()),
             onProgress: (fraction) => {
               updateProgress(
                 fraction,
@@ -1017,6 +1066,17 @@ async function runExportOnce(): Promise<void> {
               );
             },
           });
+          const primary = await makeBlob(mixedAudio);
+          if (dualExportEnabled() && mixedAudio) {
+            const silent = await makeBlob(null);
+            const silentUrl = URL.createObjectURL(silent);
+            const anchor = document.createElement('a');
+            anchor.href = silentUrl;
+            anchor.download = 'timeline-journey-silent.mp4';
+            anchor.click();
+            URL.revokeObjectURL(silentUrl);
+          }
+          return primary;
         }, { retries: 1, delayMs: 400 });
         break;
       } catch (error) {
@@ -1031,6 +1091,8 @@ async function runExportOnce(): Promise<void> {
     }
     const journey = prepared;
     noteEncodeOk();
+    document.getElementById('step-create')?.classList.add('onboarding-done');
+    localStorage.setItem('tv-onboarding-step', '3');
     saveSuccessSettings({
       formatId: formatSelect.value,
       themeId: themeSelect.value,
@@ -1464,6 +1526,45 @@ wireV15({
     const live = document.getElementById('a11y-live');
     if (live) live.textContent = text;
   },
+});
+
+wireV16({
+  locale: () => locale,
+  currentPoints,
+  updateSelection,
+  applyClipRange: (startDate, endDate, durationSec) => {
+    exactDateToggle.checked = true;
+    exactDateToggle.dispatchEvent(new Event('change'));
+    startDateInput.value = startDate;
+    endDateInput.value = endDate;
+    const duration = String(durationSec);
+    if ([...durationSelect.options].some((option) => option.value === duration)) {
+      durationSelect.value = duration;
+    }
+    updateSelection();
+  },
+  setPreviewProgress: (value) => { void renderPreviewAt(value); },
+  getTitle: () => titleInput.value.trim() || (isEnglishLike() ? 'My Journey' : '我的旅程'),
+  getPeriodLabel: currentPeriodLabel,
+  previewLive: () => {
+    if (mapConsent.checked && currentPoints().length >= 2) {
+      void renderPreviewAt(Number((document.getElementById('preview-scrubber') as HTMLInputElement | null)?.value || 500) / 1000);
+    }
+  },
+  announce: (text) => {
+    const live = document.getElementById('a11y-live');
+    if (live) live.textContent = text;
+    selectionSummary.textContent = text;
+  },
+  getAudioBuffer: () => audioBuffer,
+  setAudioBuffer: (buffer) => { audioBuffer = buffer; },
+  runExportOnce,
+  retryAtFormat: (formatId) => {
+    formatSelect.value = formatId;
+    formatSelect.dispatchEvent(new Event('change'));
+    void runExportOnce();
+  },
+  chapterMode,
 });
 
 document.addEventListener('visibilitychange', () => {

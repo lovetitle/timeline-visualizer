@@ -13,7 +13,7 @@ const SELECT_LABELS: Record<Locale, Record<string, Record<string, string>>> = {
       strong: '強 · 0.75',
     },
     outlier: { conservative: '保守', off: '關' },
-    mapStyle: { light: '淺色', dark: '深色', voyager: 'Voyager' },
+    mapStyle: { light: '淺色', dark: '深色', voyager: 'Voyager', satellite: '衛星', terrain: '地形', night: '夜景' },
     marker: { dot: '圓點', plane: '飛機', foot: '步行' },
     chapter: { off: '關閉', day: '依日', city: '依城市' },
     template: {
@@ -33,7 +33,7 @@ const SELECT_LABELS: Record<Locale, Record<string, Record<string, string>>> = {
       strong: 'Strong · 0.75',
     },
     outlier: { conservative: 'Conservative', off: 'Off' },
-    mapStyle: { light: 'Light', dark: 'Dark', voyager: 'Voyager' },
+    mapStyle: { light: 'Light', dark: 'Dark', voyager: 'Voyager', satellite: 'Satellite', terrain: 'Terrain', night: 'Night' },
     marker: { dot: 'Dot', plane: 'Plane', foot: 'Walk' },
     chapter: { off: 'Off', day: 'By day', city: 'By city' },
     template: {
@@ -53,7 +53,7 @@ const SELECT_LABELS: Record<Locale, Record<string, Record<string, string>>> = {
       strong: '強め · 0.75',
     },
     outlier: { conservative: '控えめ', off: 'オフ' },
-    mapStyle: { light: 'ライト', dark: 'ダーク', voyager: 'Voyager' },
+    mapStyle: { light: 'ライト', dark: 'ダーク', voyager: 'Voyager', satellite: '衛星', terrain: '地形', night: '夜景' },
     marker: { dot: '点', plane: '飛行機', foot: '徒歩' },
     chapter: { off: 'オフ', day: '日ごと', city: '都市ごと' },
     template: {
@@ -73,7 +73,7 @@ const SELECT_LABELS: Record<Locale, Record<string, Record<string, string>>> = {
       strong: '강하게 · 0.75',
     },
     outlier: { conservative: '보수적', off: '끔' },
-    mapStyle: { light: '밝게', dark: '어둡게', voyager: 'Voyager' },
+    mapStyle: { light: '밝게', dark: '어둡게', voyager: 'Voyager', satellite: '위성', terrain: '지형', night: '야경' },
     marker: { dot: '점', plane: '비행기', foot: '걷기' },
     chapter: { off: '끔', day: '일별', city: '도시별' },
     template: {
