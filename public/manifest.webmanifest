@@ -1,0 +1,17 @@
+{
+  "name": "時間軸視覺化",
+  "short_name": "時間軸",
+  "description": "在瀏覽器把 Google 時間軸匯出檔轉成旅行動畫影片。",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#f6f3ee",
+  "theme_color": "#1c2a24",
+  "icons": [
+    {
+      "src": "./icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

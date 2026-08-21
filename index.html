@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#1c2a24" />
+    <meta name="description" content="在瀏覽器把 Google 時間軸匯出檔轉成旅行動畫影片，檔案不會上傳。" />
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <link rel="icon" href="./icon.svg" type="image/svg+xml" />
+    <title>時間軸視覺化</title>
+  </head>
+  <body>
+    <div class="page">
+      <header class="hero">
+        <p class="eyebrow">本機處理 · 不上傳時間軸</p>
+        <h1>把 Google 時間軸<br />做成旅行影片</h1>
+        <p class="lede">選擇匯出的 Timeline.json，預覽移動路徑，再在瀏覽器裡產出 MP4。時間軸資料不會離開這台裝置，只有地圖圖磚會向 CARTO 請求。</p>
+      </header>
+
+      <div class="layout">
+        <section class="panel" aria-labelledby="file-heading">
+          <h2 id="file-heading">時間軸檔案</h2>
+          <div id="drop-zone" class="drop-zone">
+            <label class="file-button">
+              <span>選擇 Timeline.json</span>
+              <input id="timeline-file" type="file" accept="application/json,.json" />
+            </label>
+            <p class="drop-hint">或把檔案拖放到這裡</p>
+            <button id="sample-button" class="ghost" type="button">先試虛構範例旅程</button>
+          </div>
+          <p id="file-status" class="status" role="status">尚未載入時間軸</p>
+          <p id="compatibility-status" class="status muted">正在檢查影片編碼支援…</p>
+
+          <div class="export-guide">
+            <h3>還沒有檔案？從手機匯出</h3>
+            <p class="guide-intro">Google <strong>不能</strong>用登入直接抓時間軸。資料存在手機裡，必須先匯出 <code>Timeline.json</code>，再選到上方。</p>
+
+            <div class="platform-switch">
+              <input type="radio" name="export-platform" id="guide-android" checked>
+              <input type="radio" name="export-platform" id="guide-iphone">
+              <div class="tab-bar" role="tablist" aria-label="選擇手機系統">
+                <label for="guide-android">Android</label>
+                <label for="guide-iphone">iPhone</label>
+              </div>
+
+              <ol class="guide-android steps">
+                <li>
+                  <span class="step-title">打開 Google 地圖</span>
+                  <span class="step-body">請開「地圖」App，不要用手機系統設定。</span>
+                </li>
+                <li>
+                  <span class="step-title">進入設定</span>
+                  <span class="step-path">頭像 → 設定</span>
+                  <span class="step-body">頭像在畫面右上角。</span>
+                </li>
+                <li>
+                  <span class="step-title">匯出檔案</span>
+                  <span class="step-path">位置和隱私 → 匯出檔案</span>
+                  <span class="step-body">把檔案存到「下載」。檔名通常是 <code>Timeline.json</code>。</span>
+                </li>
+                <li>
+                  <span class="step-title">傳到這台電腦</span>
+                  <span class="step-body">用 USB、雲端硬碟，或把檔案寄給自己。然後拖放到上方選擇區。</span>
+                </li>
+              </ol>
+
+              <ol class="guide-iphone steps">
+                <li>
+                  <span class="step-title">打開 Google 地圖</span>
+                  <span class="step-body">請開「地圖」App，不要用 iPhone 系統設定。</span>
+                </li>
+                <li>
+                  <span class="step-title">進入設定</span>
+                  <span class="step-path">頭像 → 設定</span>
+                  <span class="step-body">頭像在畫面右上角。</span>
+                </li>
+                <li>
+                  <span class="step-title">匯出檔案</span>
+                  <span class="step-path">位置和隱私 → 匯出檔案</span>
+                  <span class="step-body">存到「檔案」App，例如「我的 iPhone → 下載項目」。檔名通常是 <code>Timeline.json</code>。</span>
+                </li>
+                <li>
+                  <span class="step-title">傳到這台電腦</span>
+                  <span class="step-body">用 AirDrop、iCloud 雲碟或郵件把 JSON 傳到電腦，再拖放到上方選擇區。</span>
+                </li>
+              </ol>
+            </div>
+
+            <details class="help-panel">
+              <summary>找不到選單、舊行程不見了？</summary>
+              <ul class="faq-list">
+                <li>正確路徑是：地圖 → 頭像 → 設定 → 位置和隱私 → 匯出檔案。不要用電腦版 Google 地圖。</li>
+                <li>Google Takeout 匯出的是舊格式，這個網頁通常無法使用。請改從手機匯出。</li>
+                <li>無法用 Google 帳號登入抓資料。時間軸存在手機，官方沒有提供給第三方讀取的 API。</li>
+                <li>換機或重裝地圖後舊行程不見：先在 Google 地圖還原時間軸備份，確認造訪記錄出現後，再重新匯出 JSON。</li>
+              </ul>
+            </details>
+          </div>
+        </section>
+
+        <section id="settings-card" class="panel hidden" aria-labelledby="settings-heading">
+          <h2 id="settings-heading">建立旅程</h2>
+          <label id="raw-signals-row" class="checkbox-row hidden">
+            <input id="raw-signals-toggle" type="checkbox" />
+            <span>改用原始定位資料</span>
+          </label>
+          <p id="raw-signals-description" class="status hidden">使用未經處理的定位估計。已降低雜訊，但路線與距離仍可能不準。</p>
+          <label id="raw-accuracy-field" class="hidden">
+            準確度上限（公尺）
+            <input id="raw-accuracy-limit" type="number" min="0" step="1" inputmode="decimal" value="100" />
+            <span class="field-help">低於此準確度的點會被排除。留空則保留所有可用定位。</span>
+          </label>
+
+          <div id="period-controls">
+            <label class="checkbox-row">
+              <input id="exact-date-toggle" type="checkbox" />
+              <span>指定精確日期</span>
+            </label>
+            <div id="month-range-fields" class="field-grid">
+              <label>
+                開始月份
+                <select id="start-month"></select>
+              </label>
+              <label>
+                結束月份
+                <select id="end-month"></select>
+              </label>
+            </div>
+            <div id="exact-date-fields" class="field-grid hidden">
+              <label>
+                開始日期
+                <input id="start-date" type="date" />
+              </label>
+              <label>
+                結束日期
+                <input id="end-date" type="date" />
+              </label>
+            </div>
+          </div>
+
+          <label>
+            影片標題
+            <input id="video-title" type="text" maxlength="80" value="我的旅程" />
+          </label>
+          <div class="field-grid">
+            <label>
+              片長
+              <select id="duration">
+                <option value="10" selected>10 秒</option>
+                <option value="15">15 秒</option>
+                <option value="20">20 秒</option>
+                <option value="30">30 秒</option>
+                <option value="45">45 秒</option>
+                <option value="60">60 秒</option>
+                <option value="90">90 秒</option>
+                <option value="120">120 秒</option>
+                <option value="180">180 秒</option>
+                <option value="300">300 秒</option>
+              </select>
+            </label>
+            <label>
+              鏡頭移動
+              <select id="camera-movement">
+                <option value="fixed">固定縮放</option>
+                <option value="steady" selected>穩定跟隨</option>
+                <option value="dynamic">動態跟隨</option>
+              </select>
+            </label>
+          </div>
+          <p id="selection-summary" class="status"></p>
+
+          <div class="privacy-notice">
+            <strong>載入地圖前請確認</strong>
+            <p>時間軸檔案不會上傳。CARTO 會收到所選旅程範圍的地圖圖磚座標，以及 IP 等一般網路資訊，可能讓圖磚供應商得知你去過的地區。</p>
+            <label class="checkbox-row">
+              <input id="map-consent" type="checkbox" />
+              <span>我了解，並要載入地圖</span>
+            </label>
+          </div>
+          <p id="settings-error" class="error hidden" role="alert"></p>
+          <div class="actions">
+            <button id="preview-button" class="secondary" type="button">預覽</button>
+            <button id="create-button" type="button" disabled>產出 MP4</button>
+          </div>
+        </section>
+
+        <section id="preview-card" class="panel preview-panel hidden" aria-labelledby="preview-heading">
+          <div class="section-heading">
+            <h2 id="preview-heading">預覽</h2>
+            <span id="progress-label">就緒</span>
+          </div>
+          <canvas id="journey-canvas" width="480" height="480"></canvas>
+          <progress id="export-progress" class="hidden" value="0" max="1"></progress>
+          <button id="cancel-button" class="secondary cancel-button hidden" type="button">取消產出影片</button>
+          <p id="error-message" class="error hidden" role="alert"></p>
+          <video id="result-video" class="hidden" controls playsinline></video>
+          <div id="result-actions" class="actions hidden">
+            <button id="share-button" type="button">分享影片</button>
+            <a id="download-link" class="button secondary" download="timeline-journey.mp4">下載 MP4</a>
+          </div>
+        </section>
+      </div>
+
+      <footer>
+        <p>不需要帳號、定位權限，也不會上傳時間軸。</p>
+        <p>地圖資料 © OpenStreetMap contributors 與 © CARTO。</p>
+      </footer>
+    </div>
+
+    <dialog id="raw-only-dialog" aria-labelledby="raw-only-heading">
+      <form method="dialog" class="dialog-card">
+        <h2 id="raw-only-heading">只找到原始定位資料</h2>
+        <p>這個檔案有原始定位，但沒有已整理的到訪或行程。可以繼續，路線可能雜訊較多或不完整，距離也只是估計。</p>
+        <p>建議先到 Google 地圖確認或還原時間軸，確認到訪與行程出現後再重新匯出，然後載入新檔。</p>
+        <div class="dialog-actions">
+          <button id="open-google-maps" type="button">開啟 Google 地圖</button>
+          <button id="continue-raw-data" class="secondary" type="button">仍使用原始資料</button>
+        </div>
+      </form>
+    </dialog>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
