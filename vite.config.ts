@@ -11,7 +11,6 @@ export default defineConfig({
         updates: 'updates.html',
         faq: 'faq.html',
         privacy: 'privacy.html',
-        domain: 'domain.html',
         stats: 'stats.html',
         terms: 'terms.html',
         legalPrivacy: 'legal-privacy.html',
