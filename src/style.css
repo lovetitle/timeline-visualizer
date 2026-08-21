@@ -12,6 +12,8 @@
   --accent-soft: #f3e2d4;
 }
 
+*, *::before, *::after { box-sizing: border-box; }
+
 .skip-link {
   position: absolute;
   left: -999px;
@@ -124,6 +126,7 @@ h2 {
 }
 
 .panel {
+  min-width: 0;
   padding: 24px;
   border: 1px solid var(--line);
   border-radius: 28px;
@@ -137,6 +140,8 @@ h2 {
 }
 
 .drop-zone {
+  min-width: 0;
+  overflow: hidden;
   padding: 18px;
   border: 1.5px dashed rgba(196, 92, 38, 0.35);
   border-radius: 20px;
@@ -156,6 +161,7 @@ h2 {
 
 .file-button, button, .button {
   display: inline-flex;
+  max-width: 100%;
   min-height: 48px;
   align-items: center;
   justify-content: center;
@@ -169,10 +175,25 @@ h2 {
   cursor: pointer;
 }
 
-.file-button { width: 100%; position: relative; }
+.file-button {
+  width: 100%;
+  position: relative;
+  margin-top: 0;
+  display: inline-flex;
+}
+
+.file-button span {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .file-button input { position: absolute; width: 1px; height: 1px; opacity: 0; }
 .ghost {
   width: 100%;
+  max-width: 100%;
   margin-top: 10px;
   color: #8a4a24;
   background: transparent;
@@ -692,10 +713,19 @@ footer a { color: #8a4a24; font-weight: 650; }
   display: inline-flex;
   position: relative;
   width: 100%;
+  max-width: 100%;
   margin-top: 10px;
   align-items: center;
   justify-content: center;
   cursor: pointer;
+  box-sizing: border-box;
+}
+
+.file-ghost span {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .file-ghost input {

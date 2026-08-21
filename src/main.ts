@@ -179,6 +179,8 @@ function isEnglishLike(): boolean {
 }
 
 function applyI18n(): void {
+  document.documentElement.lang = locale === 'zh' ? 'zh-Hant' : locale;
+  document.title = t(locale, 'pageTitle');
   document.querySelectorAll<HTMLElement>('[data-i18n]').forEach((node) => {
     const key = node.dataset.i18n as Parameters<typeof t>[1];
     if (!key) return;
@@ -193,6 +195,8 @@ function applyI18n(): void {
     new Option(isEnglishLike() ? format.labelEn : format.labelZh, format.id)
   )));
   versionLabel.textContent = `${t(locale, 'versionLabel')} ${APP_VERSION}`;
+  const themeToggle = document.getElementById('theme-mode-toggle');
+  if (themeToggle) themeToggle.setAttribute('title', t(locale, 'darkMode'));
 }
 
 function localizeError(error: unknown, fallback: string): string {

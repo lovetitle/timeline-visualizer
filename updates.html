@@ -10,29 +10,24 @@
   <body>
     <div class="page">
       <header class="hero">
-        <p class="eyebrow"><a href="./">← 回到工具</a></p>
-        <h1>更新公告</h1>
-        <p class="lede">本站在瀏覽器本機處理你的時間軸，不會上傳 Timeline 檔案。</p>
+        <p class="eyebrow"><a id="i18n-back" href="./">← 回到工具</a></p>
+        <h1 id="i18n-heading">更新公告</h1>
+        <p id="i18n-lede" class="lede">本站在瀏覽器本機處理你的時間軸，不會上傳 Timeline 檔案。</p>
       </header>
       <section class="panel">
-        <h2>最新版本</h2>
-        <ul class="faq-list">
-          <li>支援 JSON／GPX／KML、多段合併、智慧選段與旅程模板</li>
-          <li>解析度、主題、地圖風格、標記樣式、長途壓縮、離群點過濾</li>
-          <li>地名字幕、章節標記、隱私模糊、片尾與本機 BGM</li>
-          <li>批次產出、年份對比、雙檔對照、匯出 GPX／GeoJSON／SRT、分享卡與熱力圖海報</li>
-          <li>大檔降採樣、圖磚／編碼失敗重試、ETA、預覽倍速、交通節奏</li>
-          <li>深色模式、設定匯入匯出、快捷鍵、PWA 更新提示、繁中／英／日／韓</li>
-          <li>隱私報告頁、版本紅點、本機效能統計（v1.2.0）</li>
-        </ul>
-        <h2>資料說明</h2>
-        <ul class="faq-list">
-          <li>定位檔只在你的裝置處理</li>
-          <li>地圖圖磚會向 CARTO 請求（可能透露選取範圍）</li>
-          <li>造訪次數僅存本機 localStorage</li>
-        </ul>
-        <p><a class="button secondary" href="./faq.html">常見問題</a> <a class="button" href="./">開始使用</a></p>
+        <h2 id="i18n-latest">最新版本</h2>
+        <ul id="i18n-items" class="faq-list"></ul>
+        <h2 id="i18n-data">資料說明</h2>
+        <ul id="i18n-data-items" class="faq-list"></ul>
+        <p>
+          <a id="i18n-faq" class="button secondary" href="./faq.html">常見問題</a>
+          <a id="i18n-start" class="button" href="./">開始使用</a>
+        </p>
       </section>
     </div>
+    <script type="module">
+      import { applyStaticPage } from '/src/staticPages.ts';
+      applyStaticPage('updates');
+    </script>
   </body>
 </html>
