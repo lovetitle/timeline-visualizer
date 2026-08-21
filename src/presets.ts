@@ -12,6 +12,10 @@ export const QUICK_PRESETS = [
     camera: 'dynamic',
     compression: 'gentle',
     theme: 'sakura',
+    chapter: 'city',
+    placeLabels: true,
+    titleZh: '短影音旅程',
+    titleEn: 'Reels trip',
   },
   {
     id: 'island',
@@ -20,6 +24,10 @@ export const QUICK_PRESETS = [
     camera: 'steady',
     compression: 'balanced',
     theme: 'ember',
+    chapter: 'day',
+    placeLabels: true,
+    titleZh: '環島日記',
+    titleEn: 'Island diary',
   },
   {
     id: 'business',
@@ -28,5 +36,9 @@ export const QUICK_PRESETS = [
     camera: 'fixed',
     compression: 'strong',
     theme: 'ink',
+    chapter: 'city',
+    placeLabels: false,
+    titleZh: '出差紀實',
+    titleEn: 'Business trip',
   },
 ] as const;

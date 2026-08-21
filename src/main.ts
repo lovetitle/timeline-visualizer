@@ -33,6 +33,7 @@ import { recordEncodePerf } from './perf';
 import { placeLabelAtProgress } from './places';
 import { drawFrame, prepareJourney } from './renderer';
 import { withRetry } from './retry';
+import { rangeBounds } from './smartSelect';
 import { getCachedSampleVideo, setCachedSampleVideo } from './sampleVideoCache';
 import { applySelectLocale } from './selectI18n';
 import { pushRecent } from './settingsStore';
@@ -336,6 +337,7 @@ function currentRangeSignature(): string {
     `compare:${compareEnabled()}:${compareYear()}`,
     `overlay:${overlayComparePoints.length}`,
     `pace:${activityPaceEnabled()}`,
+    `lang:${locale}`,
   ].join(';');
 }
 
@@ -474,6 +476,7 @@ async function getPreparedJourney(signal?: AbortSignal): Promise<PreparedJourney
         : `正在準備地圖 ${completed}/${total}`;
     },
     activityPaceEnabled(),
+    locale,
   );
   prepared = nextJourney;
   selectedSignature = signature;
@@ -484,7 +487,7 @@ function requireMapConsent(): boolean {
   if (mapConsent.checked) return true;
   setSettingsError(locale === 'en'
     ? 'Confirm the map privacy notice first.'
-    : '請先確認地圖隱私說明，才會向 CARTO 請求地圖圖磚。');
+    : '請先確認地圖隱私說明，才會載入地圖圖磚。');
   mapConsent.focus();
   return false;
 }
@@ -653,6 +656,12 @@ function currentStyle() {
   const opacityInput = document.getElementById('compare-opacity') as HTMLInputElement | null;
   const burn = Boolean((document.getElementById('burn-captions-toggle') as HTMLInputElement | null)?.checked);
   const showAttribution = Boolean((document.getElementById('show-attribution-toggle') as HTMLInputElement | null)?.checked ?? true);
+  const mapStyle = readMapStyle();
+  const attributionText = locale === 'en' && mapStyle !== 'dark'
+    ? '© OpenStreetMap contributors  © CARTO'
+    : mapStyle === 'dark'
+      ? '© OpenStreetMap contributors  © CARTO'
+      : '© OpenStreetMap contributors';
   return {
     route: theme.route,
     routeFade: theme.routeFade,
@@ -666,6 +675,7 @@ function currentStyle() {
     compareOpacity: Number(opacityInput?.value || 35) / 100,
     burnCaptions: burn,
     showAttribution,
+    attributionText,
   };
 }
 
@@ -806,6 +816,8 @@ langSelect.addEventListener('change', () => {
   dateFormatter = new Intl.DateTimeFormat(intlLocale(locale), { dateStyle: 'medium' });
   applyI18n();
   refreshExtrasLabels(locale);
+  prepared = null;
+  selectedSignature = '';
   if (allPoints.length > 0) {
     months = localizeMonths(availableMonths(allPoints));
     const start = startSelect.value;
@@ -1234,7 +1246,7 @@ async function startHeroDemo(): Promise<void> {
     const response = await fetch(`${import.meta.env.BASE_URL}sample-timeline.json`);
     if (!response.ok) return;
     const points = parseTimelineJson(JSON.parse(await response.text()));
-    const journey = await prepareJourney(points, 360, 360, 'steady', 10, 'balanced', 'light');
+    const journey = await prepareJourney(points, 360, 360, 'steady', 10, 'balanced', 'light', undefined, undefined, false, locale);
     const loop = (now: number): void => {
       const elapsed = (now / 1000) % totalDurationSeconds(8, 1.5);
       const frame = frameAtElapsedSeconds(elapsed, 8, 1.5);
@@ -1316,7 +1328,7 @@ playSampleVideoButton.addEventListener('click', async () => {
       const offscreen = document.createElement('canvas');
       offscreen.width = 480;
       offscreen.height = 480;
-      const journey = await prepareJourney(points, 480, 480, 'steady', 8, 'balanced', 'light');
+      const journey = await prepareJourney(points, 480, 480, 'steady', 8, 'balanced', 'light', undefined, undefined, false, locale);
       blob = await createJourneyMp4(offscreen, journey, {
         durationSeconds: 8,
         title: isEnglishLike() ? 'Sample Journey' : '範例旅程',
@@ -1350,7 +1362,14 @@ startTutorialPlayer();
 wireAdvancedControls({
   locale: () => uiLocale(locale),
   allPoints: () => allPoints,
-  setPointsSelection: () => undefined,
+  setPointsSelection: (points) => {
+    const bounds = rangeBounds(points);
+    if (!bounds) return;
+    exactDateToggle.checked = true;
+    exactDateToggle.dispatchEvent(new Event('change'));
+    startDateInput.value = bounds.startDate;
+    endDateInput.value = bounds.endDate;
+  },
   currentPoints,
   selectedDistanceKm,
   updateSelection,
@@ -1361,6 +1380,11 @@ wireAdvancedControls({
   getTitle: () => titleInput.value.trim() || (isEnglishLike() ? 'My Journey' : '我的旅程'),
   getPeriodLabel: currentPeriodLabel,
   canvas,
+  flashAction: (message) => {
+    selectionSummary.textContent = message;
+    const live = document.getElementById('a11y-live');
+    if (live) live.textContent = message;
+  },
 });
 
 wireExtras({

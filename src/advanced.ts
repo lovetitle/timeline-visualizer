@@ -33,6 +33,7 @@ export interface AdvancedHost {
   getTitle: () => string;
   getPeriodLabel: () => string;
   canvas: HTMLCanvasElement;
+  flashAction?: (message: string) => void;
 }
 
 let parseWorker: Worker | null = null;
@@ -117,30 +118,48 @@ export function wireAdvancedControls(host: AdvancedHost): void {
 
   const batchQueue: { label: string; start: string; end: string; exact: boolean }[] = [];
 
-  function applySmart(points: GeoPoint[]): void {
+  function applySmart(points: GeoPoint[], label: string): void {
     const bounds = rangeBounds(points);
-    if (!bounds) return;
+    if (!bounds || points.length < 2) {
+      host.flashAction?.(host.locale() === 'en'
+        ? 'No matching segment for this smart select.'
+        : '這個智慧選取找不到合適區段。');
+      return;
+    }
     host.setPointsSelection(points);
     exactToggle.checked = true;
+    exactToggle.dispatchEvent(new Event('change'));
     startDate.value = bounds.startDate;
     endDate.value = bounds.endDate;
-    startMonth.value = bounds.startMonth;
-    endMonth.value = bounds.endMonth;
+    if ([...startMonth.options].some((option) => option.value === bounds.startMonth)) {
+      startMonth.value = bounds.startMonth;
+    }
+    if ([...endMonth.options].some((option) => option.value === bounds.endMonth)) {
+      endMonth.value = bounds.endMonth;
+    }
     document.getElementById('month-range-fields')?.classList.add('hidden');
     document.getElementById('exact-date-fields')?.classList.remove('hidden');
     host.updateSelection();
+    const km = Math.round(host.selectedDistanceKm(points));
+    host.flashAction?.(host.locale() === 'en'
+      ? `Applied ${label}: ${points.length} pts · ${km} km · ${bounds.startDate}→${bounds.endDate}`
+      : `已套用「${label}」：${points.length} 點 · ${km} km · ${bounds.startDate}→${bounds.endDate}`);
   }
 
-  smartThisYear.addEventListener('click', () => applySmart(selectThisYear(host.allPoints())));
-  smartRecent.addEventListener('click', () => applySmart(selectRecentTrip(host.allPoints())));
-  smartAbroad.addEventListener('click', () => applySmart(selectLikelyAbroad(host.allPoints())));
-  smartTrim.addEventListener('click', () => applySmart(trimIdleEdges(host.currentPoints())));
+  smartThisYear.addEventListener('click', () => applySmart(selectThisYear(host.allPoints()), host.locale() === 'en' ? 'This year' : '今年行程'));
+  smartRecent.addEventListener('click', () => applySmart(selectRecentTrip(host.allPoints()), host.locale() === 'en' ? 'Recent trip' : '最近旅程'));
+  smartAbroad.addEventListener('click', () => applySmart(selectLikelyAbroad(host.allPoints()), host.locale() === 'en' ? 'Abroad' : '海外行程'));
+  smartTrim.addEventListener('click', () => applySmart(trimIdleEdges(host.currentPoints()), host.locale() === 'en' ? 'Trim idle' : '裁切雜訊'));
 
   suggestDuration.addEventListener('click', () => {
     const km = host.selectedDistanceKm(host.currentPoints());
     const seconds = suggestDurationSeconds(km);
     durationSelect.value = String(seconds);
+    durationSelect.dispatchEvent(new Event('change'));
     host.updateSelection();
+    host.flashAction?.(host.locale() === 'en'
+      ? `Suggested duration: ${seconds}s`
+      : `建議片長：${seconds} 秒`);
   });
 
   templateSelect.addEventListener('change', () => {
@@ -152,7 +171,12 @@ export function wireAdvancedControls(host: AdvancedHost): void {
     compressionSelect.value = template.compression;
     formatSelect.value = template.formatId;
     durationSelect.value = String(template.durationHint);
+    formatSelect.dispatchEvent(new Event('change'));
+    themeSelect.dispatchEvent(new Event('change'));
     host.updateSelection();
+    host.flashAction?.(host.locale() === 'en'
+      ? `Template applied: ${templateSelect.value}`
+      : `已套用模板：${templateSelect.value}`);
   });
 
   exportGpx.addEventListener('click', () => {

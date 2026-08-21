@@ -59,6 +59,7 @@ export interface DrawStyle {
   compareOpacity?: number;
   burnCaptions?: boolean;
   showAttribution?: boolean;
+  attributionText?: string;
   hudText?: string | null;
 }
 

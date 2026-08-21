@@ -30,36 +30,46 @@ export interface V14Host {
 export function wireV14(host: V14Host): void {
   const setVal = (id: string, value: string) => {
     const node = document.getElementById(id) as HTMLInputElement | HTMLSelectElement | null;
-    if (node) node.value = value;
+    if (node) {
+      node.value = value;
+      node.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+  };
+  const setCheck = (id: string, checked: boolean) => {
+    const node = document.getElementById(id) as HTMLInputElement | null;
+    if (node) {
+      node.checked = checked;
+      node.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+  };
+  const flash = (zh: string, en: string) => {
+    const summary = document.getElementById('selection-summary');
+    const live = document.getElementById('a11y-live');
+    const text = host.locale() === 'en' ? en : zh;
+    if (summary) summary.textContent = text;
+    if (live) live.textContent = text;
   };
 
-  document.getElementById('preset-reels')?.addEventListener('click', () => {
-    const preset = QUICK_PRESETS[0];
+  const applyPreset = (preset: (typeof QUICK_PRESETS)[number]) => {
     setVal('format-select', preset.formatId);
     setVal('duration', preset.duration);
     setVal('camera-movement', preset.camera);
     setVal('compression-select', preset.compression);
     setVal('theme-select', preset.theme);
+    setVal('chapter-select', preset.chapter);
+    setCheck('place-labels-toggle', preset.placeLabels);
+    const title = document.getElementById('video-title') as HTMLInputElement | null;
+    if (title) title.value = host.locale() === 'en' ? preset.titleEn : preset.titleZh;
     host.updateSelection();
-  });
-  document.getElementById('preset-island')?.addEventListener('click', () => {
-    const preset = QUICK_PRESETS[1];
-    setVal('format-select', preset.formatId);
-    setVal('duration', preset.duration);
-    setVal('camera-movement', preset.camera);
-    setVal('compression-select', preset.compression);
-    setVal('theme-select', preset.theme);
-    host.updateSelection();
-  });
-  document.getElementById('preset-business')?.addEventListener('click', () => {
-    const preset = QUICK_PRESETS[2];
-    setVal('format-select', preset.formatId);
-    setVal('duration', preset.duration);
-    setVal('camera-movement', preset.camera);
-    setVal('compression-select', preset.compression);
-    setVal('theme-select', preset.theme);
-    host.updateSelection();
-  });
+    flash(
+      `已套用預設「${preset.titleZh}」：${preset.formatId} · ${preset.duration}s · ${preset.theme}`,
+      `Preset “${preset.titleEn}”: ${preset.formatId} · ${preset.duration}s · ${preset.theme}`,
+    );
+  };
+
+  document.getElementById('preset-reels')?.addEventListener('click', () => applyPreset(QUICK_PRESETS[0]));
+  document.getElementById('preset-island')?.addEventListener('click', () => applyPreset(QUICK_PRESETS[1]));
+  document.getElementById('preset-business')?.addEventListener('click', () => applyPreset(QUICK_PRESETS[2]));
 
   document.getElementById('mobile-preview-button')?.addEventListener('click', () => host.preview());
   document.getElementById('mobile-create-button')?.addEventListener('click', () => host.create());

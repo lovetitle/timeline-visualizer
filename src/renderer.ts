@@ -7,8 +7,9 @@ import {
   worldPositionAtDistance,
 } from './camera';
 import { cumulativeDistances, overviewRouteSegments, project, unwrapWorldPoints } from './geo';
-import { MAP_STYLES, type MapStyleId, type MarkerStyleId } from './mapStyles';
+import { tileCachePrefix, tileUrlTemplate, type MapStyleId, type MarkerStyleId } from './mapStyles';
 import { getCachedTile, setCachedTile } from './tileCache';
+import type { Locale } from './i18n';
 import { createActivityDistanceAtProgress } from './activity';
 import { recordTileRequest } from './privacyReport';
 import { withRetry } from './retry';
@@ -158,11 +159,13 @@ function drawMapBackground(
 async function loadRequiredTiles(
   coordinates: TileCoordinate[],
   mapStyle: MapStyleId,
+  locale: Locale,
   signal?: AbortSignal,
   onProgress?: (completed: number, total: number) => void,
 ): Promise<Map<string, HTMLImageElement>> {
   const tiles = new Map<string, HTMLImageElement>();
-  const template = MAP_STYLES[mapStyle].url;
+  const template = tileUrlTemplate(mapStyle, locale);
+  const cachePrefix = tileCachePrefix(mapStyle, locale);
   let nextIndex = 0;
   let completed = 0;
   const worker = async (): Promise<void> => {
@@ -173,8 +176,8 @@ async function loadRequiredTiles(
       const url = template.replace('{z}', String(coordinate.zoom))
         .replace('{x}', String(coordinate.x))
         .replace('{y}', String(coordinate.y));
-      const key = `${mapStyle}:${tileKey(coordinate)}`;
-      recordTileRequest(coordinate.zoom, coordinate.x, coordinate.y, mapStyle);
+      const key = `${cachePrefix}:${tileKey(coordinate)}`;
+      recordTileRequest(coordinate.zoom, coordinate.x, coordinate.y, `${mapStyle}:${locale}`);
       try {
         tiles.set(tileKey(coordinate), await loadImage(url, key, signal));
       } catch (error) {
@@ -199,6 +202,7 @@ export async function prepareJourney(
   signal?: AbortSignal,
   onProgress?: (completed: number, total: number) => void,
   useActivityPace = false,
+  locale: Locale = 'zh',
 ): Promise<PreparedJourney> {
   if (points.length < 2) throw new Error('請選擇至少包含兩個定位點的期間。');
   const aspect = width / height;
@@ -236,7 +240,7 @@ export async function prepareJourney(
     const ending = blendViewport(journeyEnd, endingOverview, easeOutCubic(sample / 12), size);
     for (const tile of requiredTiles(ending)) required.set(tileKey(tile), tile);
   }
-  const tiles = await loadRequiredTiles([...required.values()], mapStyle, signal, onProgress);
+  const tiles = await loadRequiredTiles([...required.values()], mapStyle, locale, signal, onProgress);
   return {
     ...journey,
     overviewRouteSegments: overviewSegments,
@@ -454,6 +458,10 @@ export function drawFrame(
     context.textAlign = 'right';
     context.fillStyle = 'rgba(36, 25, 29, 0.78)';
     context.font = `${13 * scale}px "Segoe UI", "PingFang TC", "Noto Sans TC", sans-serif`;
-    context.fillText('© OpenStreetMap contributors  © CARTO', width - 12 * scale, height - 12 * scale);
+    context.fillText(
+      style.attributionText || '© OpenStreetMap contributors  © CARTO',
+      width - 12 * scale,
+      height - 12 * scale,
+    );
   }
 }
