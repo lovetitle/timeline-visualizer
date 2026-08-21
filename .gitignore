@@ -5,3 +5,6 @@ dist
 .vercel
 .env*
 *.tsbuildinfo
+test-results
+playwright-report
+playwright/.cache
