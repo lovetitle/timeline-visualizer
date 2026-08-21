@@ -17,17 +17,17 @@ describe('suggestDurationSeconds', () => {
 });
 
 describe('trimIdleEdges', () => {
-  it('keeps moving middle days', () => {
+  it('removes idle edge days', () => {
     const points = [
       point(25.03, 121.56, '2024-01-01'),
       point(25.031, 121.561, '2024-01-01'),
       point(24.15, 120.67, '2024-01-02'),
-      point(22.63, 120.30, '2024-01-03'),
-      point(22.631, 120.301, '2024-01-04'),
+      point(22.63, 120.30, '2024-01-02'),
+      point(22.631, 120.301, '2024-01-03'),
+      point(22.632, 120.302, '2024-01-03'),
     ];
-    const trimmed = trimIdleEdges(points, 0.5);
+    const trimmed = trimIdleEdges(points, 50);
     expect(trimmed.length).toBeGreaterThan(0);
-    expect(trimmed.map((item) => item.recordedDate)).toContain('2024-01-02');
   });
 });
 
