@@ -20,3 +20,9 @@ android/.gradle/
 *.keystore
 *.aab
 *.apk
+
+android/keystore.rar
+releases/play/**/*.aab
+releases/play/**/*.apk
+releases/play/**/*.pem
+
