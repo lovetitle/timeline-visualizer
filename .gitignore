@@ -8,3 +8,15 @@ dist
 test-results
 playwright-report
 playwright/.cache
+releases/
+!releases/play/
+!releases/play/**/*.md
+android/keystore/
+android/keystore.properties
+android/local.properties
+android/app/build/
+android/.gradle/
+*.jks
+*.keystore
+*.aab
+*.apk

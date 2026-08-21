@@ -9,6 +9,28 @@ export interface ChangelogVersion {
 /** Newest first. Each locale keeps its own wording; older releases stay listed. */
 export const CHANGELOG: ChangelogVersion[] = [
   {
+    version: '1.7.1',
+    date: '2026-08-21',
+    items: {
+      zh: [
+        'Android Capacitor 封裝：可安裝 APK 與 Play 用 AAB（app.lovetitle.timeline）',
+        'Play 上架文件與上傳金鑰流程（本機簽署，不上傳 Timeline）',
+      ],
+      en: [
+        'Android Capacitor packaging: sideload APK + Play AAB (app.lovetitle.timeline)',
+        'Play Console listing docs and upload-key workflow (on-device Timeline)',
+      ],
+      ja: [
+        'Android Capacitor 包装：APK と Play 用 AAB（app.lovetitle.timeline）',
+        'Play 掲載ドキュメントとアップロード鍵の手順',
+      ],
+      ko: [
+        'Android Capacitor 패키징: APK 및 Play AAB (app.lovetitle.timeline)',
+        'Play 스토어 등록 문서와 업로드 키 절차',
+      ],
+    },
+  },
+  {
     version: '1.7.0',
     date: '2026-08-21',
     items: {

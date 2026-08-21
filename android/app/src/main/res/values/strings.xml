@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Timeline Visualizer</string>
+    <string name="title_activity_main">Timeline Visualizer</string>
+    <string name="package_name">app.lovetitle.timeline</string>
+    <string name="custom_url_scheme">app.lovetitle.timeline</string>
+</resources>
